@@ -16,7 +16,7 @@ enum TtsResultStatus {
   /// 网络错误
   networkError,
   
-  /// API 错误
+  /// API 错误（401等）
   apiError,
   
   /// 文件保存错误
@@ -44,9 +44,20 @@ class TtsResult {
   bool get isSuccess => status == TtsResultStatus.success;
 }
 
+/// TTS 测试结果
+class TtsTestResult {
+  final bool isSuccess;
+  final String? errorMessage;
+  final int? statusCode;
+
+  TtsTestResult({
+    required this.isSuccess,
+    this.errorMessage,
+    this.statusCode,
+  });
+}
+
 /// TTS 服务类 - 核心业务逻辑
-/// 
-/// 处理"检查本地缓存 -> 下载音频（如需要）-> 返回文件路径"的完整流程
 class TtsService {
   static final TtsService _instance = TtsService._internal();
   factory TtsService() => _instance;
@@ -70,6 +81,100 @@ class TtsService {
     };
   }
 
+  /// 测试 TTS 连接
+  /// 
+  /// 发送一个简单的测试请求，验证 API Key 和连接是否正常
+  Future<TtsTestResult> testConnection() async {
+    // Web 平台不支持
+    if (kIsWeb) {
+      return TtsTestResult(
+        isSuccess: false,
+        errorMessage: 'Web 平台暂不支持音频功能',
+      );
+    }
+
+    try {
+      // 构造一个简单的测试请求
+      final requestBody = {
+        'app': {
+          'appid': 'test_app_id',
+          'token': TtsConstants.apiKey,
+          'cluster': 'volcano_tts',
+        },
+        'user': {
+          'uid': 'test_user',
+        },
+        'audio': {
+          'voice_type': TtsConstants.defaultVoiceType,
+          'encoding': TtsConstants.audioFormat,
+          'sample_rate': TtsConstants.sampleRate,
+        },
+        'request': {
+          'text': '测试',
+          'reqid': 'test_${DateTime.now().millisecondsSinceEpoch}',
+          'operation': 'query',
+        },
+      };
+
+      final response = await _dio.post(
+        TtsConstants.apiUrl,
+        data: requestBody,
+        options: Options(
+          validateStatus: (status) => true, // 接受所有状态码，自行处理
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return TtsTestResult(isSuccess: true);
+      } else if (response.statusCode == 401) {
+        return TtsTestResult(
+          isSuccess: false,
+          statusCode: 401,
+          errorMessage: 'API Key 无效或已过期，请检查设置中的 TTS API Key',
+        );
+      } else if (response.statusCode == 403) {
+        return TtsTestResult(
+          isSuccess: false,
+          statusCode: 403,
+          errorMessage: '没有权限访问该服务，请检查 API Key 是否有 TTS 权限',
+        );
+      } else if (response.statusCode == 429) {
+        return TtsTestResult(
+          isSuccess: false,
+          statusCode: 429,
+          errorMessage: '请求过于频繁，请稍后再试',
+        );
+      } else {
+        return TtsTestResult(
+          isSuccess: false,
+          statusCode: response.statusCode,
+          errorMessage: '服务器错误: ${response.statusCode} - ${response.data?['message'] ?? '未知错误'}',
+        );
+      }
+    } on DioException catch (e) {
+      String errorMsg;
+      if (e.type == DioExceptionType.connectionTimeout) {
+        errorMsg = '连接超时，请检查网络连接';
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        errorMsg = '接收数据超时，请稍后重试';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMsg = '网络连接失败，请检查网络设置';
+      } else {
+        errorMsg = '网络错误: ${e.message}';
+      }
+      
+      return TtsTestResult(
+        isSuccess: false,
+        errorMessage: errorMsg,
+      );
+    } catch (e) {
+      return TtsTestResult(
+        isSuccess: false,
+        errorMessage: '测试失败: $e',
+      );
+    }
+  }
+
   /// 获取音频缓存目录
   Future<Directory> _getAudioCacheDir() async {
     final appDir = await getApplicationDocumentsDirectory();
@@ -90,35 +195,26 @@ class TtsService {
   }
 
   /// 检查本地缓存是否有效
-  /// 
-  /// 返回：缓存文件路径（有效）或 null（无效/不存在）
   Future<String?> _checkLocalCache(int poemId) async {
-    // Web 平台不支持本地文件缓存
     if (kIsWeb) return null;
 
-    // 从数据库查询缓存路径
     final poem = await _db.getPoemById(poemId);
     if (poem?.localAudioPath == null) return null;
 
-    // 检查文件是否仍然存在
     final file = File(poem!.localAudioPath!);
     if (await file.exists()) {
       return poem.localAudioPath;
     }
 
-    // 文件已被删除，清除数据库中的记录
     await _db.updateAudioPath(poemId, null);
     return null;
   }
 
   /// 调用火山引擎 TTS API 下载音频
-  /// 
-  /// 模拟实现，实际使用时需要根据真实 API 文档调整
   Future<TtsResult> _downloadAudioFromApi(
     Poem poem, {
     Function(double)? onProgress,
   }) async {
-    // Web 平台暂不支持文件下载缓存
     if (kIsWeb) {
       return TtsResult(
         status: TtsResultStatus.notSupported,
@@ -129,11 +225,10 @@ class TtsService {
     try {
       _currentCancelToken = CancelToken();
 
-      // 构造请求参数（根据火山引擎 TTS API 文档调整）
       final requestBody = {
         'app': {
           'appid': 'YOUR_APP_ID',
-          'token': 'YOUR_ACCESS_TOKEN',
+          'token': TtsConstants.apiKey,
           'cluster': 'volcano_tts',
         },
         'user': {
@@ -151,8 +246,6 @@ class TtsService {
         },
       };
 
-      // 发送请求获取音频数据
-      // 注意：此处为模拟实现，真实 API 可能返回 JSON 包含音频 URL 或直接返回音频流
       final response = await _dio.post(
         TtsConstants.apiUrl,
         data: requestBody,
@@ -167,17 +260,12 @@ class TtsService {
         ),
       );
 
-      // 处理响应
-      // 模拟：假设 API 返回的是 MP3 音频字节流
-      // 实际场景中可能需要解析 JSON 获取音频 URL，再下载音频
       if (response.statusCode == 200) {
         final audioBytes = response.data as List<int>;
         
-        // 保存到本地
         final audioPath = await _saveAudioFile(poem.id, audioBytes);
         
         if (audioPath != null) {
-          // 更新数据库缓存记录
           await _db.updateAudioPath(poem.id, audioPath);
           
           return TtsResult(
@@ -190,6 +278,11 @@ class TtsService {
             errorMessage: '保存音频文件失败',
           );
         }
+      } else if (response.statusCode == 401) {
+        return TtsResult(
+          status: TtsResultStatus.apiError,
+          errorMessage: 'API Key 无效，请在设置中配置正确的 TTS API Key',
+        );
       } else {
         return TtsResult(
           status: TtsResultStatus.apiError,
@@ -233,29 +326,15 @@ class TtsService {
     }
   }
 
-  // ==================== 公共 API ====================
-
-  /// 获取或下载音频 - 核心业务方法
-  /// 
-  /// 流程：
-  /// 1. 检查本地缓存 -> 存在直接返回
-  /// 2. 本地不存在 -> 调用 TTS API 下载
-  /// 3. 下载成功 -> 保存到本地 -> 更新数据库 -> 返回路径
-  /// 
-  /// 参数：
-  /// - [poem]：诗词对象
-  /// - [forceDownload]：强制重新下载（即使已有缓存）
-  /// - [onProgress]：下载进度回调 (0.0 ~ 1.0)
+  /// 获取或下载音频
   Future<TtsResult> getOrDownloadAudio(
     Poem poem, {
     bool forceDownload = false,
     Function(double)? onProgress,
   }) async {
-    // 1. 检查本地缓存（非强制下载模式）
     if (!forceDownload) {
       final cachedPath = await _checkLocalCache(poem.id);
       if (cachedPath != null) {
-        print('使用本地缓存音频: $cachedPath');
         return TtsResult(
           status: TtsResultStatus.success,
           audioPath: cachedPath,
@@ -263,8 +342,6 @@ class TtsService {
       }
     }
 
-    // 2. 本地无缓存，从 API 下载
-    print('正在下载音频...');
     return await _downloadAudioFromApi(poem, onProgress: onProgress);
   }
 
@@ -276,7 +353,6 @@ class TtsService {
 
   /// 清除指定诗词的音频缓存
   Future<bool> clearAudioCache(int poemId) async {
-    // Web 平台不支持
     if (kIsWeb) return false;
 
     try {
@@ -298,7 +374,6 @@ class TtsService {
 
   /// 清除所有音频缓存
   Future<void> clearAllAudioCache() async {
-    // Web 平台不支持
     if (kIsWeb) return;
 
     try {
@@ -308,7 +383,6 @@ class TtsService {
         await audioDir.create();
       }
 
-      // 清除数据库中的缓存记录
       final db = await _db.database;
       await db.update(
         DatabaseConstants.poemsTable,
@@ -321,7 +395,6 @@ class TtsService {
 
   /// 获取音频缓存大小（MB）
   Future<double> getCacheSize() async {
-    // Web 平台不支持
     if (kIsWeb) return 0.0;
 
     try {
@@ -335,7 +408,7 @@ class TtsService {
         }
       }
 
-      return totalSize / (1024 * 1024); // 转换为 MB
+      return totalSize / (1024 * 1024);
     } catch (e) {
       return 0.0;
     }

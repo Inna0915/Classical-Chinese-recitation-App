@@ -395,6 +395,36 @@ class _SettingsPageState extends State<SettingsPage> {
           
           const Divider(height: 1, indent: 16, endIndent: 16),
           
+          // TTS 连接测试按钮
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                onPressed: () => _testTTSConnection(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(UIConstants.accentColor).withOpacity(0.1),
+                  foregroundColor: const Color(UIConstants.accentColor),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: BorderSide(
+                      color: const Color(UIConstants.accentColor).withOpacity(0.3),
+                    ),
+                  ),
+                ),
+                icon: const Icon(Icons.network_check, size: 18),
+                label: const Text(
+                  '测试 TTS 连接',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+          
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          
           ListTile(
             leading: const Icon(
               Icons.record_voice_over_outlined,
@@ -1169,6 +1199,90 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  /// 测试 TTS 连接
+  void _testTTSConnection() async {
+    final ttsService = TtsService();
+    
+    Get.dialog(
+      const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('正在测试连接...'),
+          ],
+        ),
+      ),
+      barrierDismissible: false,
+    );
+    
+    final result = await ttsService.testConnection();
+    
+    Get.back(); // 关闭加载对话框
+    
+    if (result.isSuccess) {
+      Get.dialog(
+        AlertDialog(
+          backgroundColor: const Color(UIConstants.cardColor),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text('连接成功'),
+            ],
+          ),
+          content: const Text(
+            'TTS 服务连接正常，可以正常使用朗读功能。',
+            style: TextStyle(color: Color(UIConstants.textSecondaryColor)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      Get.dialog(
+        AlertDialog(
+          backgroundColor: const Color(UIConstants.cardColor),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
+          ),
+          title: Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: result.statusCode == 401 ? Colors.orange : Colors.red,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                result.statusCode == 401 ? '认证失败' : '连接失败',
+                style: TextStyle(
+                  color: result.statusCode == 401 ? Colors.orange : Colors.red,
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            result.errorMessage ?? '未知错误',
+            style: const TextStyle(color: Color(UIConstants.textSecondaryColor)),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Get.back(),
+              child: const Text('确定'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   void _showVoiceTypeDialog(SettingsService settings) {
