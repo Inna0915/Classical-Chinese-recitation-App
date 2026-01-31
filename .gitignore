@@ -1,0 +1,7 @@
+ 
+**/build/ 
+**/*.apk 
+**/*.aab 
+**/.gradle/ 
+local.properties 
+"/assets/fonts/Noto_Serif_SC.zip" 
