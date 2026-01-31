@@ -34,11 +34,17 @@ class TtsResult {
   final TtsResultStatus status;
   final String? audioPath;
   final String? errorMessage;
+  /// Web 端音频数据（字节数组）
+  final List<int>? audioBytes;
+  /// Web 端音频 URL（Blob URL）
+  final String? audioUrl;
 
   TtsResult({
     required this.status,
     this.audioPath,
     this.errorMessage,
+    this.audioBytes,
+    this.audioUrl,
   });
 
   bool get isSuccess => status == TtsResultStatus.success;
@@ -79,19 +85,18 @@ class TtsService {
       'Content-Type': 'application/json',
       'Authorization': 'Bearer ${TtsConstants.apiKey}',
     };
+    
+    // Web 平台：配置额外的浏览器选项
+    if (kIsWeb) {
+      _dio.options.extra['withCredentials'] = false;
+    }
   }
 
   /// 测试 TTS 连接
   /// 
   /// 发送一个简单的测试请求，验证 API Key 和连接是否正常
+  /// 支持 Web 和移动端测试
   Future<TtsTestResult> testConnection() async {
-    // Web 平台不支持
-    if (kIsWeb) {
-      return TtsTestResult(
-        isSuccess: false,
-        errorMessage: 'Web 平台暂不支持音频功能',
-      );
-    }
 
     try {
       // 构造一个简单的测试请求
@@ -153,6 +158,20 @@ class TtsService {
       }
     } on DioException catch (e) {
       String errorMsg;
+      
+      // 检测 CORS 错误
+      if (kIsWeb && _isCorsError(e)) {
+        return TtsTestResult(
+          isSuccess: false,
+          errorMessage: 'Web 端跨域限制：\n\n'
+              '浏览器安全策略阻止了直接调用 TTS API。\n\n'
+              '解决方案：\n'
+              '1. 使用移动端测试（推荐）\n'
+              '2. 配置代理服务器转发请求\n'
+              '3. 使用浏览器插件临时禁用 CORS（仅开发测试）',
+        );
+      }
+      
       if (e.type == DioExceptionType.connectionTimeout) {
         errorMsg = '连接超时，请检查网络连接';
       } else if (e.type == DioExceptionType.receiveTimeout) {
@@ -211,16 +230,13 @@ class TtsService {
   }
 
   /// 调用火山引擎 TTS API 下载音频
+  /// 
+  /// 在移动端：下载并保存到本地文件系统
+  /// 在 Web 端：直接返回音频数据（通过 data 字段）
   Future<TtsResult> _downloadAudioFromApi(
     Poem poem, {
     Function(double)? onProgress,
   }) async {
-    if (kIsWeb) {
-      return TtsResult(
-        status: TtsResultStatus.notSupported,
-        errorMessage: 'Web 平台暂不支持音频缓存，请使用移动设备体验完整功能',
-      );
-    }
 
     try {
       _currentCancelToken = CancelToken();
@@ -263,6 +279,15 @@ class TtsService {
       if (response.statusCode == 200) {
         final audioBytes = response.data as List<int>;
         
+        // Web 平台：直接返回音频数据，不保存到文件
+        if (kIsWeb) {
+          return TtsResult(
+            status: TtsResultStatus.success,
+            audioBytes: audioBytes,
+          );
+        }
+        
+        // 移动端：保存到本地文件
         final audioPath = await _saveAudioFile(poem.id, audioBytes);
         
         if (audioPath != null) {
@@ -294,6 +319,15 @@ class TtsService {
         return TtsResult(
           status: TtsResultStatus.cancelled,
           errorMessage: '下载已取消',
+        );
+      }
+      
+      // 检测 CORS 错误
+      if (kIsWeb && _isCorsError(e)) {
+        return TtsResult(
+          status: TtsResultStatus.networkError,
+          errorMessage: 'Web 端跨域限制：浏览器安全策略阻止了直接调用 TTS API。\n'
+              '请使用移动端测试，或配置代理服务器。',
         );
       }
       
@@ -349,6 +383,21 @@ class TtsService {
   void cancelDownload() {
     _currentCancelToken?.cancel('用户取消下载');
     _currentCancelToken = null;
+  }
+
+  /// 检测是否为 CORS 错误（Web 平台）
+  bool _isCorsError(DioException e) {
+    if (!kIsWeb) return false;
+    
+    final errorStr = e.toString().toLowerCase();
+    final message = e.message?.toLowerCase() ?? '';
+    
+    // CORS 错误的常见特征
+    return errorStr.contains('cors') ||
+           errorStr.contains('cross-origin') ||
+           message.contains('xmlhttprequest') ||
+           (e.response?.statusCode == 404 && e.requestOptions.method == 'OPTIONS') ||
+           (e.type == DioExceptionType.badResponse && e.response == null);
   }
 
   /// 清除指定诗词的音频缓存

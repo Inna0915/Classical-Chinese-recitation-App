@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
@@ -185,13 +186,6 @@ class PoemController extends GetxController {
     final poem = currentPoem.value;
     if (poem == null) return;
 
-    // Web 平台不支持音频播放
-    if (kIsWeb) {
-      errorMessage.value = 'Web 平台暂不支持音频播放，请使用移动设备体验';
-      playbackState.value = PlaybackState.error;
-      return;
-    }
-
     switch (playbackState.value) {
       case PlaybackState.idle:
       case PlaybackState.error:
@@ -213,8 +207,6 @@ class PoemController extends GetxController {
 
   /// 开始播放（带缓存逻辑）
   Future<void> _startPlay(Poem poem) async {
-    if (_audioPlayer == null) return;
-    
     playbackState.value = PlaybackState.loading;
     downloadProgress.value = 0.0;
     errorMessage.value = '';
@@ -234,19 +226,49 @@ class PoemController extends GetxController {
 
     // 播放音频
     try {
-      await _audioPlayer!.setSourceDeviceFile(result.audioPath!);
-      await _audioPlayer!.resume();
-      
-      // 更新当前诗词的缓存状态（如果有变化）
-      if (poem.localAudioPath != result.audioPath) {
-        final updatedPoem = await _db.getPoemById(poem.id);
-        if (updatedPoem != null) {
-          currentPoem.value = updatedPoem;
-        }
+      if (kIsWeb) {
+        // Web 平台：使用字节数据播放
+        await _playAudioOnWeb(result);
+      } else {
+        // 移动端：使用本地文件播放
+        await _playAudioOnMobile(result, poem);
       }
     } catch (e) {
       playbackState.value = PlaybackState.error;
       errorMessage.value = '播放失败: $e';
+    }
+  }
+
+  /// Web 平台播放音频
+  Future<void> _playAudioOnWeb(TtsResult result) async {
+    if (_audioPlayer == null) {
+      _audioPlayer = AudioPlayer();
+      _initAudioPlayer();
+    }
+    
+    // Web 端使用字节数据播放
+    if (result.audioBytes != null) {
+      // audioplayers 支持通过 setSourceBytes 播放
+      await _audioPlayer!.setSource(BytesSource(Uint8List.fromList(result.audioBytes!)));
+      await _audioPlayer!.resume();
+    } else {
+      throw Exception('Web 端音频数据为空');
+    }
+  }
+
+  /// 移动端播放音频
+  Future<void> _playAudioOnMobile(TtsResult result, Poem poem) async {
+    if (_audioPlayer == null) return;
+    
+    await _audioPlayer!.setSourceDeviceFile(result.audioPath!);
+    await _audioPlayer!.resume();
+    
+    // 更新当前诗词的缓存状态（如果有变化）
+    if (poem.localAudioPath != result.audioPath) {
+      final updatedPoem = await _db.getPoemById(poem.id);
+      if (updatedPoem != null) {
+        currentPoem.value = updatedPoem;
+      }
     }
   }
 
