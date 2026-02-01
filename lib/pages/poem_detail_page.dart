@@ -26,6 +26,24 @@ class PoemDetailPage extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
         actions: [
+          // 收藏按钮
+          Obx(() {
+            final poem = controller.currentPoem.value;
+            if (poem == null) return const SizedBox.shrink();
+            
+            final isFav = controller.isFavorite(poem.id);
+            return IconButton(
+              icon: Icon(
+                isFav ? Icons.favorite : Icons.favorite_outline,
+                color: isFav 
+                    ? const Color(UIConstants.accentColor) 
+                    : const Color(UIConstants.textSecondaryColor),
+              ),
+              tooltip: isFav ? '取消收藏' : '收藏',
+              onPressed: () => controller.toggleFavorite(poem.id),
+            );
+          }),
+          
           // 清除缓存按钮
           Obx(() {
             final poem = controller.currentPoem.value;

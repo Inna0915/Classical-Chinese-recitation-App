@@ -3,7 +3,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../models/poem.dart';
+import '../models/poem_group.dart';
 import '../services/database_helper.dart';
+import '../services/settings_service.dart';
 import '../services/tts_service.dart';
 
 /// 播放状态
@@ -63,6 +65,18 @@ class PoemController extends GetxController {
   /// 初始化错误
   final RxString initError = ''.obs;
 
+  /// 分组列表
+  final RxList<PoemGroup> groups = <PoemGroup>[].obs;
+
+  /// 当前选中的分组ID (-1 表示全部)
+  final RxInt selectedGroupId = RxInt(-1);
+
+  /// 收藏列表
+  final RxList<Poem> favoritePoems = <Poem>[].obs;
+
+  /// 当前底部导航索引
+  final RxInt currentTabIndex = 0.obs;
+
   // ==================== 初始化 ====================
 
   @override
@@ -87,6 +101,12 @@ class PoemController extends GetxController {
       
       // 加载诗词数据
       await loadPoems();
+      
+      // 加载分组列表
+      await loadGroups();
+      
+      // 加载收藏列表
+      await loadFavoritePoems();
       
       isInitialized.value = true;
     } catch (e, stackTrace) {
@@ -179,6 +199,119 @@ class PoemController extends GetxController {
     duration.value = Duration.zero;
   }
 
+  /// 加载分组列表
+  Future<void> loadGroups() async {
+    try {
+      final list = await _db.getAllGroups();
+      groups.value = list;
+    } catch (e) {
+      print('加载分组失败: $e');
+    }
+  }
+
+  /// 选择分组并筛选诗词
+  void selectGroup(int? groupId) {
+    selectedGroupId.value = groupId ?? -1;
+  }
+
+  /// 根据选中分组返回筛选后的诗词
+  List<Poem> get filteredPoems {
+    if (selectedGroupId.value == -1) {
+      return poems;
+    }
+    return poems.where((p) => p.groupId == selectedGroupId.value).toList();
+  }
+
+  /// 添加新分组
+  Future<void> addGroup(String name) async {
+    try {
+      final newGroup = PoemGroup(
+        id: DateTime.now().millisecondsSinceEpoch,
+        name: name,
+        sortOrder: groups.length,
+        createdAt: DateTime.now(),
+      );
+      await _db.insertGroup(newGroup);
+      await loadGroups();
+    } catch (e) {
+      errorMessage.value = '添加分组失败: $e';
+    }
+  }
+
+  /// 删除分组
+  Future<void> deleteGroup(int groupId) async {
+    try {
+      await _db.deleteGroup(groupId);
+      await loadGroups();
+      // 如果删除的是当前选中的分组，重置为全部
+      if (selectedGroupId.value == groupId) {
+        selectedGroupId.value = -1;
+      }
+    } catch (e) {
+      errorMessage.value = '删除分组失败: $e';
+    }
+  }
+
+  /// 移动诗词到分组
+  Future<void> movePoemToGroup(int poemId, int? groupId) async {
+    try {
+      await _db.updatePoemGroup(poemId, groupId);
+      await loadPoems();
+      
+      // 如果当前诗词是被移动的，也更新它
+      if (currentPoem.value?.id == poemId) {
+        final updated = await _db.getPoemById(poemId);
+        if (updated != null) {
+          currentPoem.value = updated;
+        }
+      }
+    } catch (e) {
+      errorMessage.value = '移动诗词失败: $e';
+    }
+  }
+
+  /// 切换收藏状态
+  Future<void> toggleFavorite(int poemId) async {
+    try {
+      final newStatus = await _db.toggleFavorite(poemId);
+      await loadPoems();
+      await loadFavoritePoems();
+      
+      // 如果当前诗词是被操作的，也更新它
+      if (currentPoem.value?.id == poemId) {
+        final updated = await _db.getPoemById(poemId);
+        if (updated != null) {
+          currentPoem.value = updated;
+        }
+      }
+      
+      Get.snackbar(
+        newStatus ? '已收藏' : '取消收藏',
+        newStatus ? '诗词已添加到收藏夹' : '诗词已从收藏夹移除',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 1),
+      );
+    } catch (e) {
+      errorMessage.value = '切换收藏状态失败: $e';
+    }
+  }
+
+  /// 加载收藏列表
+  Future<void> loadFavoritePoems() async {
+    try {
+      final list = await _db.getFavoritePoems();
+      favoritePoems.value = list;
+    } catch (e) {
+      print('加载收藏列表失败: $e');
+    }
+  }
+
+  /// 检查是否已收藏
+  bool isFavorite(int poemId) {
+    final poem = poems.firstWhereOrNull((p) => p.id == poemId);
+    return poem?.isFavorite ?? false;
+  }
+
   // ==================== 播放控制 ====================
 
   /// 播放/暂停切换
@@ -211,8 +344,17 @@ class PoemController extends GetxController {
     downloadProgress.value = 0.0;
     errorMessage.value = '';
 
+    // 获取当前设置
+    final settings = SettingsService.to;
+    final audioParams = AudioParams(
+      speechRate: settings.speechRate.value,
+      loudnessRate: settings.loudnessRate.value,
+    );
+
     final result = await _ttsService.getOrDownloadAudio(
       poem,
+      voiceType: settings.voiceType.value,
+      audioParams: audioParams,
       onProgress: (progress) {
         downloadProgress.value = progress;
       },

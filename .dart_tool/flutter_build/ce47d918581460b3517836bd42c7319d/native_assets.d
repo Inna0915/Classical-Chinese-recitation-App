@@ -1,0 +1,1 @@
+ G:\\code\\vscode\\Classical-Chinese-recitation-App\\.dart_tool\\flutter_build\\ce47d918581460b3517836bd42c7319d\\native_assets.yaml: 

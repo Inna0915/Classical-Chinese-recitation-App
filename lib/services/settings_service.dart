@@ -1,6 +1,8 @@
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/ai_models.dart';
+import '../constants/app_constants.dart';
+import '../constants/tts_voices.dart';
 
 /// 设置服务 - 管理应用配置
 class SettingsService extends GetxService {
@@ -21,10 +23,24 @@ class SettingsService extends GetxService {
   static const String _keyCustomPrompt = 'custom_prompt';
   
   // ==================== TTS Observable 配置项 ====================
-  final RxString apiKey = ''.obs;
-  final RxString apiUrl = 'https://openspeech.bytedance.com/api/v1/tts'.obs;
-  final RxString voiceType = 'zh_female_qingxin'.obs;
-  final RxBool hasConfig = false.obs;
+  /// APP ID
+  final RxString appId = TtsConstants.appId.obs;
+  /// Access Token (API Key)
+  final RxString apiKey = TtsConstants.accessToken.obs;
+  /// Secret Key
+  final RxString secretKey = TtsConstants.secretKey.obs;
+  /// API URL
+  final RxString apiUrl = TtsConstants.apiUrl.obs;
+  /// 资源 ID
+  final RxString resourceId = TtsConstants.resourceId.obs;
+  /// 当前选择的音色
+  final RxString voiceType = TtsConstants.defaultVoiceType.obs;
+  /// 语速 [-50, 100]
+  final RxInt speechRate = 0.obs;
+  /// 音量 [-50, 100]
+  final RxInt loudnessRate = 0.obs;
+  /// 是否有配置（已内置，始终为 true）
+  final RxBool hasConfig = true.obs;
 
   // ==================== AI Observable 配置项 ====================
   final RxString aiProvider = 'kimi'.obs;
@@ -42,11 +58,16 @@ class SettingsService extends GetxService {
 
   /// 加载设置
   void _loadSettings() {
-    // TTS 配置
-    apiKey.value = _prefs.getString(_keyApiKey) ?? '';
-    apiUrl.value = _prefs.getString(_keyApiUrl) ?? 'https://openspeech.bytedance.com/api/v1/tts';
-    voiceType.value = _prefs.getString(_keyVoiceType) ?? 'zh_female_qingxin';
-    hasConfig.value = apiKey.value.isNotEmpty;
+    // TTS 配置（优先从本地加载，否则使用内置默认值）
+    appId.value = _prefs.getString('tts_app_id') ?? TtsConstants.appId;
+    apiKey.value = _prefs.getString('tts_access_token') ?? TtsConstants.accessToken;
+    secretKey.value = _prefs.getString('tts_secret_key') ?? TtsConstants.secretKey;
+    apiUrl.value = _prefs.getString('tts_api_url') ?? TtsConstants.apiUrl;
+    resourceId.value = _prefs.getString('tts_resource_id') ?? TtsConstants.resourceId;
+    voiceType.value = _prefs.getString(_keyVoiceType) ?? TtsConstants.defaultVoiceType;
+    speechRate.value = _prefs.getInt('tts_speech_rate') ?? 0;
+    loudnessRate.value = _prefs.getInt('tts_loudness_rate') ?? 0;
+    hasConfig.value = true; // 已内置配置
     
     // AI 配置 - 只在 provider 是 kimi 时预设 API Key
     aiProvider.value = _prefs.getString(_keyAIProvider) ?? 'kimi';
@@ -88,23 +109,67 @@ class SettingsService extends GetxService {
 
   // ==================== TTS 配置方法 ====================
   
-  /// 保存 API Key
-  Future<void> saveApiKey(String key) async {
-    await _prefs.setString(_keyApiKey, key);
-    apiKey.value = key;
-    hasConfig.value = key.isNotEmpty;
+  /// 保存 APP ID
+  Future<void> saveAppId(String id) async {
+    await _prefs.setString('tts_app_id', id);
+    appId.value = id;
+  }
+  
+  /// 保存 Access Token (API Key)
+  Future<void> saveAccessToken(String token) async {
+    await _prefs.setString('tts_access_token', token);
+    apiKey.value = token;
+  }
+  
+  /// 保存 Secret Key
+  Future<void> saveSecretKey(String key) async {
+    await _prefs.setString('tts_secret_key', key);
+    secretKey.value = key;
   }
 
   /// 保存 API URL
   Future<void> saveApiUrl(String url) async {
-    await _prefs.setString(_keyApiUrl, url);
+    await _prefs.setString('tts_api_url', url);
     apiUrl.value = url;
+  }
+  
+  /// 保存资源 ID
+  Future<void> saveResourceId(String id) async {
+    await _prefs.setString('tts_resource_id', id);
+    resourceId.value = id;
   }
 
   /// 保存音色类型
   Future<void> saveVoiceType(String voice) async {
     await _prefs.setString(_keyVoiceType, voice);
     voiceType.value = voice;
+  }
+  
+  /// 保存语速
+  Future<void> saveSpeechRate(int rate) async {
+    await _prefs.setInt('tts_speech_rate', rate);
+    speechRate.value = rate;
+  }
+  
+  /// 保存音量
+  Future<void> saveLoudnessRate(int rate) async {
+    await _prefs.setInt('tts_loudness_rate', rate);
+    loudnessRate.value = rate;
+  }
+  
+  /// 重置 TTS 配置为默认值
+  Future<void> resetTtsConfig() async {
+    await _prefs.remove('tts_app_id');
+    await _prefs.remove('tts_access_token');
+    await _prefs.remove('tts_secret_key');
+    await _prefs.remove('tts_api_url');
+    await _prefs.remove('tts_resource_id');
+    
+    appId.value = TtsConstants.appId;
+    apiKey.value = TtsConstants.accessToken;
+    secretKey.value = TtsConstants.secretKey;
+    apiUrl.value = TtsConstants.apiUrl;
+    resourceId.value = TtsConstants.resourceId;
   }
 
   // ==================== AI 配置方法 ====================
