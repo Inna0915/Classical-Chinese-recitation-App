@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../constants/ai_models.dart';
 import '../constants/ai_prompts.dart';
@@ -359,38 +360,126 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           )),
           
+          // APP ID
           ListTile(
             leading: const Icon(
-              Icons.key_outlined,
+              Icons.app_registration,
               color: Color(UIConstants.textSecondaryColor),
             ),
-            title: const Text('API Key'),
+            title: const Text('APP ID'),
             subtitle: Obx(() => Text(
-              settings.apiKey.value.isEmpty
-                  ? '未设置'
-                  : '${settings.apiKey.value.substring(0, settings.apiKey.value.length > 8 ? 8 : settings.apiKey.value.length)}****',
-              style: const TextStyle(fontSize: 12),
-            )),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showApiKeyDialog(settings),
-          ),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          ListTile(
-            leading: const Icon(
-              Icons.link_outlined,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: const Text('API 地址'),
-            subtitle: Obx(() => Text(
-              settings.apiUrl.value,
+              settings.appId.value.isEmpty ? '未设置' : settings.appId.value,
               style: const TextStyle(fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             )),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showApiUrlDialog(settings),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 18),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: settings.appId.value));
+                    Get.snackbar('已复制', 'APP ID 已复制到剪贴板', snackPosition: SnackPosition.BOTTOM);
+                  },
+                ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+            onTap: () => _showEditConfigDialog('APP ID', settings.appId.value, (v) => settings.saveAppId(v)),
+          ),
+          
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          
+          // Access Token
+          ListTile(
+            leading: const Icon(
+              Icons.key,
+              color: Color(UIConstants.textSecondaryColor),
+            ),
+            title: const Text('Access Token'),
+            subtitle: Obx(() => Text(
+              settings.apiKey.value.isEmpty ? '未设置' : settings.apiKey.value,
+              style: const TextStyle(fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 18),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: settings.apiKey.value));
+                    Get.snackbar('已复制', 'Access Token 已复制到剪贴板', snackPosition: SnackPosition.BOTTOM);
+                  },
+                ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+            onTap: () => _showEditConfigDialog('Access Token', settings.apiKey.value, (v) => settings.saveAccessToken(v), isSecret: true),
+          ),
+          
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          
+          // Secret Key
+          ListTile(
+            leading: const Icon(
+              Icons.lock_outline,
+              color: Color(UIConstants.textSecondaryColor),
+            ),
+            title: const Text('Secret Key'),
+            subtitle: Obx(() => Text(
+              settings.secretKey.value.isEmpty ? '未设置' : settings.secretKey.value,
+              style: const TextStyle(fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 18),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: settings.secretKey.value));
+                    Get.snackbar('已复制', 'Secret Key 已复制到剪贴板', snackPosition: SnackPosition.BOTTOM);
+                  },
+                ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+            onTap: () => _showEditConfigDialog('Secret Key', settings.secretKey.value, (v) => settings.saveSecretKey(v), isSecret: true),
+          ),
+          
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          
+          // Resource ID
+          ListTile(
+            leading: const Icon(
+              Icons.folder_outlined,
+              color: Color(UIConstants.textSecondaryColor),
+            ),
+            title: const Text('Resource ID'),
+            subtitle: Obx(() => Text(
+              settings.resourceId.value,
+              style: const TextStyle(fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.copy, size: 18),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: settings.resourceId.value));
+                    Get.snackbar('已复制', 'Resource ID 已复制到剪贴板', snackPosition: SnackPosition.BOTTOM);
+                  },
+                ),
+                const Icon(Icons.chevron_right),
+              ],
+            ),
+            onTap: () => _showEditConfigDialog('Resource ID', settings.resourceId.value, (v) => settings.saveResourceId(v)),
           ),
           
           const Divider(height: 1, indent: 16, endIndent: 16),
@@ -423,6 +512,27 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           
+          // 查看调试日志按钮
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+            child: SizedBox(
+              width: double.infinity,
+              height: 36,
+              child: TextButton.icon(
+                onPressed: () => _showTtsDebugLogs(),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(UIConstants.textSecondaryColor),
+                  padding: EdgeInsets.zero,
+                ),
+                icon: const Icon(Icons.article_outlined, size: 16),
+                label: const Text(
+                  '查看调试日志',
+                  style: TextStyle(fontSize: 13),
+                ),
+              ),
+            ),
+          ),
+          
           const Divider(height: 1, indent: 16, endIndent: 16),
           
           ListTile(
@@ -437,6 +547,23 @@ class _SettingsPageState extends State<SettingsPage> {
             )),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showVoiceTypeDialog(settings),
+          ),
+          
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          
+          // 恢复默认配置按钮
+          ListTile(
+            leading: const Icon(
+              Icons.restore,
+              color: Color(UIConstants.textSecondaryColor),
+            ),
+            title: const Text('恢复默认配置'),
+            subtitle: const Text(
+              '重置为内置凭证',
+              style: TextStyle(fontSize: 12),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showResetTtsConfigConfirm(settings),
           ),
         ],
       ),
@@ -1072,135 +1199,6 @@ class _SettingsPageState extends State<SettingsPage> {
 
   // ==================== TTS 配置对话框 ====================
 
-  void _showApiKeyDialog(SettingsService settings) {
-    final controller = TextEditingController(text: settings.apiKey.value);
-    
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          '配置 TTS API Key',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              '请输入火山引擎语音合成的 API Key',
-              style: TextStyle(
-                color: Color(UIConstants.textSecondaryColor),
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              obscureText: true,
-              decoration: InputDecoration(
-                hintText: '输入 API Key',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(
-                    color: Color(UIConstants.accentColor),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text(
-              '取消',
-              style: TextStyle(
-                color: Color(UIConstants.textSecondaryColor),
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              settings.saveApiKey(controller.text.trim());
-              Get.back();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(UIConstants.accentColor),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showApiUrlDialog(SettingsService settings) {
-    final controller = TextEditingController(text: settings.apiUrl.value);
-    
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          '配置 API 地址',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
-          ),
-        ),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            hintText: '输入 API URL',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(UIConstants.accentColor),
-              ),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text(
-              '取消',
-              style: TextStyle(
-                color: Color(UIConstants.textSecondaryColor),
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              settings.saveApiUrl(controller.text.trim());
-              Get.back();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(UIConstants.accentColor),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// 测试 TTS 连接
   void _testTTSConnection() async {
     final ttsService = TtsService();
@@ -1475,5 +1473,242 @@ class _SettingsPageState extends State<SettingsPage> {
       'zh_male_chenwen': '男声 - 沉稳',
     };
     return names[voiceType] ?? voiceType;
+  }
+
+
+  void _showEditConfigDialog(
+    String label,
+    String currentValue,
+    Function(String) onSave, {
+    bool isSecret = false,
+  }) {
+    final controller = TextEditingController(text: currentValue);
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(UIConstants.cardColor),
+        title: Text('修改 $label'),
+        content: TextField(
+          controller: controller,
+          obscureText: isSecret,
+          decoration: InputDecoration(
+            hintText: '输入 $label',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          maxLines: isSecret ? 1 : 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              onSave(controller.text.trim());
+              Get.back();
+              Get.snackbar(
+                '已保存',
+                '$label 已更新',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(UIConstants.accentColor),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetTtsConfigConfirm(SettingsService settings) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(UIConstants.cardColor),
+        title: const Text('恢复默认配置'),
+        content: const Text('确定要恢复 TTS 默认配置吗？这将覆盖您自定义的设置。'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              settings.resetTtsConfig();
+              Get.back();
+              Get.snackbar(
+                '已恢复',
+                'TTS 配置已恢复为默认值',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: Colors.green,
+                colorText: Colors.white,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('恢复'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  /// 显示 TTS 调试日志
+  void _showTtsDebugLogs() {
+    final ttsService = TtsService();
+    final logs = ttsService.getLogList();
+    
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.7,
+        padding: const EdgeInsets.all(UIConstants.defaultPadding),
+        decoration: const BoxDecoration(
+          color: Color(UIConstants.cardColor),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(UIConstants.defaultRadius),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 拖动条
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(UIConstants.dividerColor),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // 标题栏
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'TTS 调试日志',
+                    style: TextStyle(
+                      fontFamily: FontConstants.chineseSerif,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 复制按钮
+                      IconButton(
+                        icon: const Icon(Icons.copy, size: 20),
+                        onPressed: () {
+                          final allLogs = ttsService.getLogs();
+                          Clipboard.setData(ClipboardData(text: allLogs));
+                          Get.snackbar(
+                            '已复制',
+                            '日志已复制到剪贴板',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        },
+                        tooltip: '复制全部日志',
+                      ),
+                      // 清空按钮
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                        onPressed: () {
+                          ttsService.clearLogs();
+                          Get.back();
+                          Get.snackbar(
+                            '已清空',
+                            '日志已清空',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        },
+                        tooltip: '清空日志',
+                      ),
+                      // 关闭按钮
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Get.back(),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 8),
+              
+              // 日志内容
+              Expanded(
+                child: logs.isEmpty
+                    ? const Center(
+                        child: Text(
+                          '暂无日志\n请先点击"测试 TTS 连接"',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Color(UIConstants.textSecondaryColor),
+                          ),
+                        ),
+                      )
+                    : Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E1E), // 深色背景模拟终端
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: ListView.builder(
+                          itemCount: logs.length,
+                          itemBuilder: (context, index) {
+                            final log = logs[index];
+                            // 根据日志内容设置颜色
+                            Color logColor = const Color(0xFFD4D4D4); // 默认灰色
+                            if (log.contains('失败') || log.contains('错误') || log.contains('异常')) {
+                              logColor = const Color(0xFFF44336); // 红色
+                            } else if (log.contains('成功')) {
+                              logColor = const Color(0xFF4CAF50); // 绿色
+                            } else if (log.contains('请求') || log.contains('Headers')) {
+                              logColor = const Color(0xFF64B5F6); // 蓝色
+                            } else if (log.contains('响应') || log.contains('Status')) {
+                              logColor = const Color(0xFFFFB74D); // 橙色
+                            }
+                            
+                            return SelectableText(
+                              log,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontFamily: 'monospace',
+                                color: logColor,
+                                height: 1.4,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              // 提示文字
+              if (logs.isNotEmpty)
+                const Text(
+                  '提示：日志会在每次测试时自动清空并重新记录',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(UIConstants.textSecondaryColor),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      isScrollControlled: true,
+    );
   }
 }

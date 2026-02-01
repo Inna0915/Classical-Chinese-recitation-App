@@ -1,29 +1,57 @@
 /// 应用常量配置
 
-/// TTS API 配置（字节跳动/火山引擎）
+/// TTS API 配置（火山引擎/豆包语音合成）
 class TtsConstants {
-  /// ⚠️ 请替换为您的实际 API Key
-  /// 建议从环境变量或安全存储中获取
-  static const String apiKey = 'YOUR_VOLCENGINE_API_KEY_HERE';
+  // ==================== API 认证信息 ====================
+  /// APP ID - 从火山引擎控制台获取
+  static const String appId = '3792227411';
   
-  /// 火山引擎语音合成 API 端点
-  /// 文档：https://www.volcengine.com/docs/6561/79817
-  static const String apiUrl = 'https://openspeech.bytedance.com/api/v1/tts';
+  /// Access Token - 从火山引擎控制台获取
+  static const String accessToken = 'FFboPOKdi8mb56VAkczjrp_bdMCKPv_5';
   
-  /// 默认语音类型（中文情感女声）
-  static const String defaultVoiceType = 'zh_female_qingxin';
+  /// Secret Key - 用于某些认证场景
+  static const String secretKey = 'NVRXsBvOEsNS6OWyC2MKtMVCDkLRn11d';
   
-  /// 音频格式：mp3
+  // ==================== API 配置 ====================
+  /// 火山引擎 TTS API v3 端点
+  /// 文档：https://www.volcengine.com/docs/6561/196768
+  static const String apiUrl = 'https://openspeech.bytedance.com/api/v3/tts/unidirectional';
+  
+  /// 资源信息 ID - 豆包语音合成模型 2.0（字符版）
+  static const String resourceId = 'seed-tts-2.0';
+  
+  /// 模型版本 - 使用 1.1 版本音质更好、延时更优
+  static const String model = 'seed-tts-1.1';
+  
+  // ==================== 音频配置 ====================
+  /// 默认音色 - Vivi 2.0
+  static const String defaultVoiceType = 'zh_female_vv_uranus_bigtts';
+  
+  /// 默认音频格式: mp3/ogg_opus/pcm
   static const String audioFormat = 'mp3';
   
-  /// 音频采样率
+  /// 默认音频采样率 [8000,16000,22050,24000,32000,44100,48000]
   static const int sampleRate = 24000;
   
+  /// 默认音频比特率（仅 MP3 有效）
+  static const int bitRate = 128000;
+  
+  // ==================== 语音参数配置 ====================
+  /// 默认语速 [-50, 100]，100代表2.0倍速，-50代表0.5倍速
+  static const int defaultSpeechRate = 0;
+  
+  /// 默认音量 [-50, 100]，100代表2.0倍音量，-50代表0.5倍音量
+  static const int defaultLoudnessRate = 0;
+  
+  /// 默认情感强度 [1, 5]
+  static const int defaultEmotionScale = 4;
+  
+  // ==================== 网络配置 ====================
   /// 连接超时时间（秒）
   static const int connectTimeout = 30;
   
-  /// 接收超时时间（秒）
-  static const int receiveTimeout = 60;
+  /// 接收超时时间（秒）- 流式合成需要较长时间
+  static const int receiveTimeout = 120;
 }
 
 /// 数据库配置
@@ -32,10 +60,13 @@ class DatabaseConstants {
   static const String dbName = 'guyun_reader.db';
   
   /// 数据库版本
-  static const int dbVersion = 1;
+  static const int dbVersion = 2;
   
   /// 诗词表名
   static const String poemsTable = 'poems';
+  
+  /// 分组表名
+  static const String groupsTable = 'poem_groups';
   
   /// 音频缓存目录名
   static const String audioCacheDir = 'audio_cache';

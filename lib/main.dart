@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'constants/app_constants.dart';
 import 'controllers/poem_controller.dart';
-import 'pages/poem_list_page.dart';
+import 'pages/main_page.dart';
 import 'services/settings_service.dart';
 
 void main() async {
@@ -21,10 +21,10 @@ class GuYunReaderApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: '古韵诵读',
+      title: '诗文朗诵',
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
-      home: const PoemListPage(),
+      home: const MainPage(),
     );
   }
 

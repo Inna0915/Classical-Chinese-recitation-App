@@ -23,6 +23,12 @@ class Poem {
   /// 创建时间
   final DateTime? createdAt;
 
+  /// 所属分组ID
+  final int? groupId;
+
+  /// 是否收藏
+  final bool isFavorite;
+
   Poem({
     required this.id,
     required this.title,
@@ -31,6 +37,8 @@ class Poem {
     required this.content,
     this.localAudioPath,
     this.createdAt,
+    this.groupId,
+    this.isFavorite = false,
   });
 
   /// 从数据库 Map 转换为 Poem 对象
@@ -45,6 +53,8 @@ class Poem {
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
           : null,
+      groupId: map['group_id'] as int?,
+      isFavorite: (map['is_favorite'] as int?) == 1,
     );
   }
 
@@ -58,6 +68,8 @@ class Poem {
       'content': content,
       'local_audio_path': localAudioPath,
       'created_at': createdAt?.toIso8601String(),
+      'group_id': groupId,
+      'is_favorite': isFavorite ? 1 : 0,
     };
   }
 
@@ -70,6 +82,8 @@ class Poem {
     String? content,
     String? localAudioPath,
     DateTime? createdAt,
+    int? groupId,
+    bool? isFavorite,
   }) {
     return Poem(
       id: id ?? this.id,
@@ -79,11 +93,13 @@ class Poem {
       content: content ?? this.content,
       localAudioPath: localAudioPath ?? this.localAudioPath,
       createdAt: createdAt ?? this.createdAt,
+      groupId: groupId ?? this.groupId,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 
   @override
   String toString() {
-    return 'Poem{id: $id, title: $title, author: $author, localAudioPath: $localAudioPath}';
+    return 'Poem{id: $id, title: $title, author: $author, localAudioPath: $localAudioPath, groupId: $groupId, isFavorite: $isFavorite}';
   }
 }

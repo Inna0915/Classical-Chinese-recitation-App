@@ -7,6 +7,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:path_provider/path_provider.dart';
 import '../constants/app_constants.dart';
 import '../models/poem.dart';
+import '../models/poem_group.dart';
 
 /// 数据库帮助类 - 单例模式
 /// 
@@ -65,6 +66,8 @@ class DatabaseHelper {
         dynasty TEXT,
         content TEXT NOT NULL,
         local_audio_path TEXT,
+        group_id INTEGER,
+        is_favorite INTEGER DEFAULT 0,
         created_at TEXT
       )
     ''');
@@ -74,13 +77,97 @@ class DatabaseHelper {
       CREATE INDEX idx_poems_title ON ${DatabaseConstants.poemsTable}(title)
     ''');
 
+    // 创建分组表
+    await db.execute('''
+      CREATE TABLE ${DatabaseConstants.groupsTable} (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        sort_order INTEGER DEFAULT 0,
+        created_at TEXT
+      )
+    ''');
+
+    // 创建分组表索引
+    await db.execute('''
+      CREATE INDEX idx_groups_sort_order ON ${DatabaseConstants.groupsTable}(sort_order)
+    ''');
+
+    // 插入默认分组
+    await _insertDefaultGroups(db);
+
     // 预置一些经典古诗数据
     await _insertDefaultPoems(db);
   }
 
   /// 数据库升级
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // 后续版本升级时在此处理
+    if (oldVersion == 1 && newVersion == 2) {
+      // 版本 1 升级到 2：添加新字段和新表
+      
+      // 添加 group_id 字段到 poems 表
+      await db.execute('''
+        ALTER TABLE ${DatabaseConstants.poemsTable} 
+        ADD COLUMN group_id INTEGER
+      ''');
+
+      // 添加 is_favorite 字段到 poems 表
+      await db.execute('''
+        ALTER TABLE ${DatabaseConstants.poemsTable} 
+        ADD COLUMN is_favorite INTEGER DEFAULT 0
+      ''');
+
+      // 创建分组表
+      await db.execute('''
+        CREATE TABLE ${DatabaseConstants.groupsTable} (
+          id INTEGER PRIMARY KEY,
+          name TEXT NOT NULL,
+          sort_order INTEGER DEFAULT 0,
+          created_at TEXT
+        )
+      ''');
+
+      // 创建分组表索引
+      await db.execute('''
+        CREATE INDEX idx_groups_sort_order ON ${DatabaseConstants.groupsTable}(sort_order)
+      ''');
+
+      // 插入默认分组
+      await _insertDefaultGroups(db);
+    }
+  }
+
+  /// 插入默认分组
+  Future<void> _insertDefaultGroups(Database db) async {
+    final defaultGroups = [
+      {
+        'id': 1,
+        'name': '全部',
+        'sort_order': 0,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'id': 2,
+        'name': '唐诗',
+        'sort_order': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'id': 3,
+        'name': '宋词',
+        'sort_order': 2,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+    ];
+
+    final batch = db.batch();
+    for (final group in defaultGroups) {
+      batch.insert(
+        DatabaseConstants.groupsTable,
+        group,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit();
   }
 
   /// 插入默认诗词数据
@@ -93,6 +180,8 @@ class DatabaseHelper {
         'dynasty': '唐',
         'content': '床前明月光，疑是地上霜。\n举头望明月，低头思故乡。',
         'local_audio_path': null,
+        'group_id': null,
+        'is_favorite': 0,
         'created_at': DateTime.now().toIso8601String(),
       },
       {
@@ -102,6 +191,8 @@ class DatabaseHelper {
         'dynasty': '唐',
         'content': '春眠不觉晓，处处闻啼鸟。\n夜来风雨声，花落知多少。',
         'local_audio_path': null,
+        'group_id': null,
+        'is_favorite': 0,
         'created_at': DateTime.now().toIso8601String(),
       },
       {
@@ -111,6 +202,8 @@ class DatabaseHelper {
         'dynasty': '唐',
         'content': '白日依山尽，黄河入海流。\n欲穷千里目，更上一层楼。',
         'local_audio_path': null,
+        'group_id': null,
+        'is_favorite': 0,
         'created_at': DateTime.now().toIso8601String(),
       },
       {
@@ -120,6 +213,8 @@ class DatabaseHelper {
         'dynasty': '唐',
         'content': '千山鸟飞绝，万径人踪灭。\n孤舟蓑笠翁，独钓寒江雪。',
         'local_audio_path': null,
+        'group_id': null,
+        'is_favorite': 0,
         'created_at': DateTime.now().toIso8601String(),
       },
       {
@@ -129,6 +224,8 @@ class DatabaseHelper {
         'dynasty': '唐',
         'content': '日照香炉生紫烟，遥看瀑布挂前川。\n飞流直下三千尺，疑是银河落九天。',
         'local_audio_path': null,
+        'group_id': null,
+        'is_favorite': 0,
         'created_at': DateTime.now().toIso8601String(),
       },
       {
@@ -138,6 +235,8 @@ class DatabaseHelper {
         'dynasty': '唐',
         'content': '朝辞白帝彩云间，千里江陵一日还。\n两岸猿声啼不住，轻舟已过万重山。',
         'local_audio_path': null,
+        'group_id': null,
+        'is_favorite': 0,
         'created_at': DateTime.now().toIso8601String(),
       },
       {
@@ -147,6 +246,8 @@ class DatabaseHelper {
         'dynasty': '唐',
         'content': '离离原上草，一岁一枯荣。\n野火烧不尽，春风吹又生。\n远芳侵古道，晴翠接荒城。\n又送王孙去，萋萋满别情。',
         'local_audio_path': null,
+        'group_id': null,
+        'is_favorite': 0,
         'created_at': DateTime.now().toIso8601String(),
       },
       {
@@ -156,6 +257,8 @@ class DatabaseHelper {
         'dynasty': '唐',
         'content': '清明时节雨纷纷，路上行人欲断魂。\n借问酒家何处有？牧童遥指杏花村。',
         'local_audio_path': null,
+        'group_id': null,
+        'is_favorite': 0,
         'created_at': DateTime.now().toIso8601String(),
       },
       {
@@ -165,6 +268,8 @@ class DatabaseHelper {
         'dynasty': '唐',
         'content': '红豆生南国，春来发几枝。\n愿君多采撷，此物最相思。',
         'local_audio_path': null,
+        'group_id': null,
+        'is_favorite': 0,
         'created_at': DateTime.now().toIso8601String(),
       },
       {
@@ -174,6 +279,8 @@ class DatabaseHelper {
         'dynasty': '宋',
         'content': '明月几时有？把酒问青天。\n不知天上宫阙，今夕是何年。\n我欲乘风归去，又恐琼楼玉宇，高处不胜寒。\n起舞弄清影，何似在人间。\n\n转朱阁，低绮户，照无眠。\n不应有恨，何事长向别时圆？\n人有悲欢离合，月有阴晴圆缺，此事古难全。\n但愿人长久，千里共婵娟。',
         'local_audio_path': null,
+        'group_id': null,
+        'is_favorite': 0,
         'created_at': DateTime.now().toIso8601String(),
       },
     ];
@@ -189,7 +296,7 @@ class DatabaseHelper {
     await batch.commit();
   }
 
-  // ==================== CRUD 操作 ====================
+  // ==================== 诗词 CRUD 操作 ====================
 
   /// 获取所有诗词
   Future<List<Poem>> getAllPoems() async {
@@ -277,6 +384,132 @@ class DatabaseHelper {
       orderBy: 'id ASC',
     );
     return maps.map((map) => Poem.fromMap(map)).toList();
+  }
+
+  // ==================== 分组 CRUD 操作 ====================
+
+  /// 获取所有分组
+  Future<List<PoemGroup>> getAllGroups() async {
+    final db = await database;
+    final maps = await db.query(
+      DatabaseConstants.groupsTable,
+      orderBy: 'sort_order ASC',
+    );
+    return maps.map((map) => PoemGroup.fromMap(map)).toList();
+  }
+
+  /// 插入新分组
+  Future<int> insertGroup(PoemGroup group) async {
+    final db = await database;
+    return await db.insert(
+      DatabaseConstants.groupsTable,
+      group.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// 更新分组
+  Future<int> updateGroup(PoemGroup group) async {
+    final db = await database;
+    return await db.update(
+      DatabaseConstants.groupsTable,
+      group.toMap(),
+      where: 'id = ?',
+      whereArgs: [group.id],
+    );
+  }
+
+  /// 删除分组
+  Future<int> deleteGroup(int id) async {
+    final db = await database;
+    return await db.delete(
+      DatabaseConstants.groupsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // ==================== 诗词分组关联操作 ====================
+
+  /// 根据分组获取诗词
+  /// [groupId] 为 null 时返回所有诗词
+  Future<List<Poem>> getPoemsByGroup(int? groupId) async {
+    final db = await database;
+    
+    if (groupId == null) {
+      // 返回所有诗词
+      return await getAllPoems();
+    }
+    
+    final maps = await db.query(
+      DatabaseConstants.poemsTable,
+      where: 'group_id = ?',
+      whereArgs: [groupId],
+      orderBy: 'id ASC',
+    );
+    return maps.map((map) => Poem.fromMap(map)).toList();
+  }
+
+  /// 更新诗词分组
+  Future<int> updatePoemGroup(int poemId, int? groupId) async {
+    final db = await database;
+    return await db.update(
+      DatabaseConstants.poemsTable,
+      {'group_id': groupId},
+      where: 'id = ?',
+      whereArgs: [poemId],
+    );
+  }
+
+  // ==================== 收藏操作 ====================
+
+  /// 切换收藏状态
+  Future<bool> toggleFavorite(int poemId) async {
+    final db = await database;
+    
+    // 获取当前收藏状态
+    final maps = await db.query(
+      DatabaseConstants.poemsTable,
+      columns: ['is_favorite'],
+      where: 'id = ?',
+      whereArgs: [poemId],
+    );
+    
+    if (maps.isEmpty) return false;
+    
+    final currentStatus = (maps.first['is_favorite'] as int?) == 1;
+    final newStatus = !currentStatus;
+    
+    await db.update(
+      DatabaseConstants.poemsTable,
+      {'is_favorite': newStatus ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [poemId],
+    );
+    
+    return newStatus;
+  }
+
+  /// 获取收藏的诗词
+  Future<List<Poem>> getFavoritePoems() async {
+    final db = await database;
+    final maps = await db.query(
+      DatabaseConstants.poemsTable,
+      where: 'is_favorite = 1',
+      orderBy: 'id ASC',
+    );
+    return maps.map((map) => Poem.fromMap(map)).toList();
+  }
+
+  /// 更新收藏状态
+  Future<int> updatePoemFavorite(int poemId, bool isFavorite) async {
+    final db = await database;
+    return await db.update(
+      DatabaseConstants.poemsTable,
+      {'is_favorite': isFavorite ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [poemId],
+    );
   }
 
   /// 关闭数据库连接

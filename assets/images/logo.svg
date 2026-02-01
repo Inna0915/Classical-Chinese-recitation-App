@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FAF8F3"/>
+      <stop offset="100%" style="stop-color:#F5F0E8"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="512" height="512" fill="url(#bg)" rx="80" ry="80"/>
+  
+  <!-- 外圆环 -->
+  <circle cx="256" cy="256" r="200" fill="none" stroke="#C45C48" stroke-width="12"/>
+  
+  <!-- 内圆环 -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#C45C48" stroke-width="4"/>
+  
+  <!-- 装饰点 -->
+  <circle cx="256" cy="85" r="8" fill="#C45C48"/>
+  <circle cx="256" cy="427" r="8" fill="#C45C48"/>
+  <circle cx="85" cy="256" r="8" fill="#C45C48"/>
+  <circle cx="427" cy="256" r="8" fill="#C45C48"/>
+  
+  <!-- 诗字 -->
+  <text x="256" y="290" font-family="serif" font-size="180" font-weight="bold" fill="#1A1A1A" text-anchor="middle">诗</text>
+  
+  <!-- 朗诵小字 -->
+  <text x="256" y="380" font-family="serif" font-size="50" fill="#C45C48" text-anchor="middle">朗诵</text>
+</svg>

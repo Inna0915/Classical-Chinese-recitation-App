@@ -1,11 +1,11 @@
 {
-    "name": "demoapp",
-    "short_name": "demoapp",
+    "name": "诗文朗诵",
+    "short_name": "诗文朗诵",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#FAF8F3",
+    "theme_color": "#C45C48",
+    "description": "古韵诵读 - AI 朗读古诗词应用",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
