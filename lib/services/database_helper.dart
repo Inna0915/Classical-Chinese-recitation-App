@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../constants/app_constants.dart';
 import '../models/poem.dart';
 import '../models/poem_group.dart';
+import '../models/voice_cache.dart';
 
 /// 数据库帮助类 - 单例模式
 /// 
@@ -133,7 +134,36 @@ class DatabaseHelper {
 
       // 插入默认分组
       await _insertDefaultGroups(db);
+      
+      // 创建语音缓存表
+      await _createVoiceCacheTable(db);
     }
+  }
+  
+  /// 创建语音缓存表
+  Future<void> _createVoiceCacheTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${DatabaseConstants.voiceCacheTable} (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        poem_id INTEGER NOT NULL,
+        voice_type TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_size INTEGER DEFAULT 0,
+        created_at TEXT,
+        UNIQUE(poem_id, voice_type)
+      )
+    ''');
+    
+    // 创建索引
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_voice_cache_poem 
+      ON ${DatabaseConstants.voiceCacheTable}(poem_id)
+    ''');
+    
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_voice_cache_voice 
+      ON ${DatabaseConstants.voiceCacheTable}(voice_type)
+    ''');
   }
 
   /// 插入默认分组
@@ -524,6 +554,100 @@ class DatabaseHelper {
     return await db.update(
       DatabaseConstants.poemsTable,
       {'is_favorite': isFavorite ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [poemId],
+    );
+  }
+
+  // ==================== 语音缓存操作 ====================
+
+  /// 获取语音缓存
+  Future<VoiceCache?> getVoiceCache(int poemId, String voiceType) async {
+    final db = await database;
+    final maps = await db.query(
+      DatabaseConstants.voiceCacheTable,
+      where: 'poem_id = ? AND voice_type = ?',
+      whereArgs: [poemId, voiceType],
+    );
+    
+    if (maps.isEmpty) return null;
+    return VoiceCache.fromMap(maps.first);
+  }
+
+  /// 获取诗词的所有语音缓存
+  Future<List<VoiceCache>> getVoiceCachesForPoem(int poemId) async {
+    final db = await database;
+    final maps = await db.query(
+      DatabaseConstants.voiceCacheTable,
+      where: 'poem_id = ?',
+      whereArgs: [poemId],
+      orderBy: 'created_at DESC',
+    );
+    return maps.map((map) => VoiceCache.fromMap(map)).toList();
+  }
+
+  /// 保存语音缓存
+  Future<int> saveVoiceCache(VoiceCache cache) async {
+    final db = await database;
+    return await db.insert(
+      DatabaseConstants.voiceCacheTable,
+      cache.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// 删除语音缓存
+  Future<int> deleteVoiceCache(int poemId, String voiceType) async {
+    final db = await database;
+    return await db.delete(
+      DatabaseConstants.voiceCacheTable,
+      where: 'poem_id = ? AND voice_type = ?',
+      whereArgs: [poemId, voiceType],
+    );
+  }
+
+  /// 删除诗词的所有语音缓存
+  Future<int> deleteAllVoiceCachesForPoem(int poemId) async {
+    final db = await database;
+    return await db.delete(
+      DatabaseConstants.voiceCacheTable,
+      where: 'poem_id = ?',
+      whereArgs: [poemId],
+    );
+  }
+
+  /// 获取语音缓存总大小（字节）
+  Future<int> getVoiceCacheSize() async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT SUM(file_size) as total_size 
+      FROM ${DatabaseConstants.voiceCacheTable}
+    ''');
+    return result.first['total_size'] as int? ?? 0;
+  }
+
+  /// 获取所有语音缓存
+  Future<List<VoiceCache>> getAllVoiceCaches() async {
+    final db = await database;
+    final maps = await db.query(
+      DatabaseConstants.voiceCacheTable,
+      orderBy: 'created_at DESC',
+    );
+    return maps.map((map) => VoiceCache.fromMap(map)).toList();
+  }
+
+  /// 清除所有语音缓存
+  Future<int> clearAllVoiceCaches() async {
+    final db = await database;
+    return await db.delete(DatabaseConstants.voiceCacheTable);
+  }
+
+  /// 更新诗词音频路径
+  Future<int> updatePoemAudioPath(int poemId, String? audioPath) async {
+    final db = await database;
+    return await db.update(
+      DatabaseConstants.poemsTable,
+      {'local_audio_path': audioPath},
       where: 'id = ?',
       whereArgs: [poemId],
     );

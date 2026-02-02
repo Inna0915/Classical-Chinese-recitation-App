@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../models/poem.dart';
 import '../models/poem_group.dart';
+import '../models/tts_result.dart';
 import '../services/database_helper.dart';
 import '../services/settings_service.dart';
 import '../services/tts_service.dart';

@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/ai_models.dart';
 import '../constants/app_constants.dart';
+import '../constants/tts_voices.dart';
 
 /// 设置服务 - 管理应用配置
 class SettingsService extends GetxService {
@@ -10,7 +11,8 @@ class SettingsService extends GetxService {
   late SharedPreferences _prefs;
   
   // ==================== TTS 配置 Keys ====================
-
+  static const String _keyApiKey = 'tts_api_key';
+  static const String _keyApiUrl = 'tts_api_url';
   static const String _keyVoiceType = 'tts_voice_type';
   
   // ==================== AI 模型配置 Keys ====================
@@ -162,20 +164,14 @@ class SettingsService extends GetxService {
     await _prefs.remove('tts_secret_key');
     await _prefs.remove('tts_api_url');
     await _prefs.remove('tts_resource_id');
-<<<<<<< HEAD
     await _prefs.remove(_keyVoiceType);
-=======
->>>>>>> ffe1c78b74edfd90ad6a3dce3049b871fef80d2a
     
     appId.value = TtsConstants.appId;
     apiKey.value = TtsConstants.accessToken;
     secretKey.value = TtsConstants.secretKey;
     apiUrl.value = TtsConstants.apiUrl;
     resourceId.value = TtsConstants.resourceId;
-<<<<<<< HEAD
     voiceType.value = TtsConstants.defaultVoiceType;
-=======
->>>>>>> ffe1c78b74edfd90ad6a3dce3049b871fef80d2a
   }
 
   // ==================== AI 配置方法 ====================

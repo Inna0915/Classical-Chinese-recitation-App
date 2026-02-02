@@ -60,13 +60,16 @@ class DatabaseConstants {
   static const String dbName = 'guyun_reader.db';
   
   /// 数据库版本
-  static const int dbVersion = 2;
+  static const int dbVersion = 3;
   
   /// 诗词表名
   static const String poemsTable = 'poems';
   
   /// 分组表名
   static const String groupsTable = 'poem_groups';
+  
+  /// 语音缓存表名 - 支持多音色缓存
+  static const String voiceCacheTable = 'voice_cache';
   
   /// 音频缓存目录名
   static const String audioCacheDir = 'audio_cache';
