@@ -418,6 +418,23 @@ class DatabaseHelper {
       whereArgs: [group.id],
     );
   }
+  
+  /// 批量更新分组排序
+  Future<void> updateGroupsSortOrder(List<PoemGroup> groups) async {
+    final db = await database;
+    final batch = db.batch();
+    
+    for (int i = 0; i < groups.length; i++) {
+      batch.update(
+        DatabaseConstants.groupsTable,
+        {'sort_order': i},
+        where: 'id = ?',
+        whereArgs: [groups[i].id],
+      );
+    }
+    
+    await batch.commit(noResult: true);
+  }
 
   /// 删除分组
   Future<int> deleteGroup(int id) async {

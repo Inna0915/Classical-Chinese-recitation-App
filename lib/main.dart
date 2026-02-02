@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'constants/app_constants.dart';
+import 'constants/tts_voices.dart';
 import 'controllers/poem_controller.dart';
 import 'pages/main_page.dart';
 import 'services/settings_service.dart';
@@ -11,6 +12,9 @@ void main() async {
   // 初始化服务
   await Get.putAsync(() => SettingsService().init());
   Get.put(PoemController());
+  
+  // 初始化 TTS 音色列表
+  await TtsVoices.init();
   
   runApp(const GuYunReaderApp());
 }

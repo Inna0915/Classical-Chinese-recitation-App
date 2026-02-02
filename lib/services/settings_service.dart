@@ -163,12 +163,14 @@ class SettingsService extends GetxService {
     await _prefs.remove('tts_secret_key');
     await _prefs.remove('tts_api_url');
     await _prefs.remove('tts_resource_id');
+    await _prefs.remove(_keyVoiceType);
     
     appId.value = TtsConstants.appId;
     apiKey.value = TtsConstants.accessToken;
     secretKey.value = TtsConstants.secretKey;
     apiUrl.value = TtsConstants.apiUrl;
     resourceId.value = TtsConstants.resourceId;
+    voiceType.value = TtsConstants.defaultVoiceType;
   }
 
   // ==================== AI 配置方法 ====================

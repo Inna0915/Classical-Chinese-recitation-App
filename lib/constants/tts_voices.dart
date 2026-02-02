@@ -1,6 +1,10 @@
 /// 火山引擎 TTS 音色列表 - 豆包语音合成模型 2.0
 /// 文档: https://www.volcengine.com/docs/6561/1257544
 
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 /// 音色信息模型
 class TtsVoice {
   final String name;
@@ -178,8 +182,86 @@ class TtsVoices {
     description: '知性姐姐音',
   );
 
+  // ==================== 自定义音色存储 ====================
+  static final List<TtsVoice> _customVoices = [];
+  static bool _initialized = false;
+  
+  /// 初始化自定义音色列表
+  static Future<void> init() async {
+    if (_initialized) return;
+    await _loadCustomVoices();
+    _initialized = true;
+  }
+  
+  /// 加载自定义音色
+  static Future<void> _loadCustomVoices() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final customVoicesJson = prefs.getString('tts_custom_voices');
+      if (customVoicesJson != null) {
+        final List<dynamic> decoded = jsonDecode(customVoicesJson);
+        _customVoices.clear();
+        for (final item in decoded) {
+          _customVoices.add(TtsVoice(
+            name: item['name'] ?? '自定义音色',
+            voiceType: item['voiceType'] ?? '',
+            language: item['language'] ?? '中文',
+            category: item['category'] ?? '自定义',
+            abilities: List<String>.from(item['abilities'] ?? []),
+            description: item['description'],
+          ));
+        }
+      }
+    } catch (e) {
+      debugPrint('加载自定义音色失败: $e');
+    }
+  }
+  
+  /// 保存自定义音色
+  static Future<void> _saveCustomVoices() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final encoded = _customVoices.map((v) => {
+        'name': v.name,
+        'voiceType': v.voiceType,
+        'language': v.language,
+        'category': v.category,
+        'abilities': v.abilities,
+        'description': v.description,
+      }).toList();
+      await prefs.setString('tts_custom_voices', jsonEncode(encoded));
+    } catch (e) {
+      debugPrint('保存自定义音色失败: $e');
+    }
+  }
+  
+  /// 添加自定义音色
+  static Future<void> addCustomVoice(TtsVoice voice) async {
+    // 检查是否已存在
+    if (_customVoices.any((v) => v.voiceType == voice.voiceType)) {
+      throw Exception('该音色已存在');
+    }
+    _customVoices.add(voice);
+    await _saveCustomVoices();
+  }
+  
+  /// 删除自定义音色
+  static Future<void> removeCustomVoice(String voiceType) async {
+    _customVoices.removeWhere((v) => v.voiceType == voiceType);
+    await _saveCustomVoices();
+  }
+  
+  /// 获取所有自定义音色
+  static List<TtsVoice> get customVoices => List.unmodifiable(_customVoices);
+  
+  /// 判断是否为自定义音色
+  static bool isCustomVoice(String voiceType) {
+    return _customVoices.any((v) => v.voiceType == voiceType);
+  }
+
   // ==================== 所有音色列表 ====================
-  static const List<TtsVoice> allVoices = [
+  static List<TtsVoice> get allVoices => [
+    // 内置音色
     // 通用场景
     vivi2,
     xiaohe2,
@@ -200,6 +282,8 @@ class TtsVoices {
     shuanglangshaonian,
     tiancaitongzhuo,
     cancan,
+    // 自定义音色
+    ..._customVoices,
   ];
 
   /// 默认音色 - Vivi 2.0

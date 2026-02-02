@@ -251,6 +251,48 @@ class PoemController extends GetxController {
       errorMessage.value = '删除分组失败: $e';
     }
   }
+  
+  /// 重新排序分组
+  Future<void> reorderGroups(int oldIndex, int newIndex) async {
+    try {
+      if (oldIndex < 0 || oldIndex >= groups.length) return;
+      if (newIndex < 0 || newIndex > groups.length) return;
+      
+      // 调整新索引（如果是在列表中向下移动）
+      if (newIndex > oldIndex) {
+        newIndex--;
+      }
+      
+      // 本地重新排序
+      final group = groups.removeAt(oldIndex);
+      groups.insert(newIndex, group);
+      
+      // 更新数据库
+      await _db.updateGroupsSortOrder(groups);
+      
+      // 刷新列表
+      await loadGroups();
+    } catch (e) {
+      errorMessage.value = '排序分组失败: $e';
+    }
+  }
+  
+  /// 删除诗词
+  Future<void> deletePoem(int poemId) async {
+    try {
+      // 停止当前播放（如果是同一首）
+      if (currentPoem.value?.id == poemId) {
+        await stop();
+        currentPoem.value = null;
+      }
+      
+      await _db.deletePoem(poemId);
+      await loadPoems();
+      await loadFavoritePoems();
+    } catch (e) {
+      errorMessage.value = '删除诗文失败: $e';
+    }
+  }
 
   /// 移动诗词到分组
   Future<void> movePoemToGroup(int poemId, int? groupId) async {

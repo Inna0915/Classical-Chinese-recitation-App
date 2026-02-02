@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../constants/ai_models.dart';
 import '../constants/ai_prompts.dart';
 import '../constants/app_constants.dart';
+import '../constants/tts_voices.dart';
 import '../controllers/poem_controller.dart';
 import '../services/settings_service.dart';
 import '../services/tts_service.dart';
@@ -1284,43 +1285,182 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showVoiceTypeDialog(SettingsService settings) {
-    final voices = {
-      'zh_female_qingxin': '女声 - 清新',
-      'zh_female_wenrou': '女声 - 温柔',
-      'zh_male_qingshuai': '男声 - 清朗',
-      'zh_male_chenwen': '男声 - 沉稳',
-    };
-    
     Get.dialog(
       AlertDialog(
         backgroundColor: const Color(UIConstants.cardColor),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         ),
-        title: const Text(
-          '选择朗读音色',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              '选择朗读音色',
+              style: TextStyle(
+                fontFamily: FontConstants.chineseSerif,
+                color: Color(UIConstants.textPrimaryColor),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _showAddCustomVoiceDialog(settings),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('添加', style: TextStyle(fontSize: 13)),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: TtsVoices.allVoices.length,
+            itemBuilder: (context, index) {
+              final voice = TtsVoices.allVoices[index];
+              final isCustom = TtsVoices.isCustomVoice(voice.voiceType);
+              return Obx(() => RadioListTile<String>(
+                title: Row(
+                  children: [
+                    Expanded(child: Text(voice.name)),
+                    if (isCustom)
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                        onPressed: () => _showDeleteCustomVoiceConfirm(voice, settings),
+                      ),
+                  ],
+                ),
+                subtitle: Text(
+                  '${voice.language} · ${voice.abilities.join('、')}',
+                  style: const TextStyle(fontSize: 12),
+                ),
+                value: voice.voiceType,
+                groupValue: settings.voiceType.value,
+                activeColor: const Color(UIConstants.accentColor),
+                onChanged: (value) {
+                  if (value != null) {
+                    settings.saveVoiceType(value);
+                    Get.back();
+                  }
+                },
+              ));
+            },
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: voices.entries.map((entry) {
-            return Obx(() => RadioListTile<String>(
-              title: Text(entry.value),
-              value: entry.key,
-              groupValue: settings.voiceType.value,
-              activeColor: const Color(UIConstants.accentColor),
-              onChanged: (value) {
-                if (value != null) {
-                  settings.saveVoiceType(value);
-                  Get.back();
-                }
-              },
-            ));
-          }).toList(),
+      ),
+    );
+  }
+  
+  /// 显示添加自定义音色对话框
+  void _showAddCustomVoiceDialog(SettingsService settings) {
+    final nameController = TextEditingController();
+    final voiceTypeController = TextEditingController();
+    final languageController = TextEditingController(text: '中文');
+    
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(UIConstants.cardColor),
+        title: const Text('添加自定义音色'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(
+                  labelText: '音色名称',
+                  hintText: '如：我的自定义音色',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: voiceTypeController,
+                decoration: const InputDecoration(
+                  labelText: 'Voice Type',
+                  hintText: '如：zh_female_xxx_bigtts',
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: languageController,
+                decoration: const InputDecoration(
+                  labelText: '语言',
+                  hintText: '如：中文',
+                ),
+              ),
+            ],
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.isEmpty || voiceTypeController.text.isEmpty) {
+                Get.snackbar('错误', '请填写完整信息');
+                return;
+              }
+              
+              final voice = TtsVoice(
+                name: nameController.text.trim(),
+                voiceType: voiceTypeController.text.trim(),
+                language: languageController.text.trim(),
+                category: '自定义',
+                abilities: ['指令遵循'],
+              );
+              
+              try {
+                await TtsVoices.addCustomVoice(voice);
+                Get.back();
+                Get.back(); // 关闭音色选择对话框
+                _showVoiceTypeDialog(settings); // 重新打开刷新列表
+                Get.snackbar('成功', '自定义音色已添加');
+              } catch (e) {
+                Get.snackbar('错误', e.toString());
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(UIConstants.accentColor),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('添加'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  /// 显示删除自定义音色确认
+  void _showDeleteCustomVoiceConfirm(TtsVoice voice, SettingsService settings) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(UIConstants.cardColor),
+        title: const Text('删除自定义音色'),
+        content: Text('确定要删除 "${voice.name}" 吗？'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await TtsVoices.removeCustomVoice(voice.voiceType);
+              // 如果当前选中的音色被删除，恢复为默认
+              if (settings.voiceType.value == voice.voiceType) {
+                settings.saveVoiceType(TtsConstants.defaultVoiceType);
+              }
+              Get.back();
+              Get.back(); // 关闭音色选择对话框
+              _showVoiceTypeDialog(settings); // 重新打开刷新列表
+              Get.snackbar('成功', '自定义音色已删除');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
       ),
     );
   }
@@ -1466,13 +1606,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   String _getVoiceTypeName(String voiceType) {
-    final names = {
-      'zh_female_qingxin': '女声 - 清新',
-      'zh_female_wenrou': '女声 - 温柔',
-      'zh_male_qingshuai': '男声 - 清朗',
-      'zh_male_chenwen': '男声 - 沉稳',
-    };
-    return names[voiceType] ?? voiceType;
+    final voice = TtsVoices.getVoiceByType(voiceType);
+    return voice?.name ?? voiceType;
   }
 
 
