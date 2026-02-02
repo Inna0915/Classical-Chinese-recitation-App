@@ -3,7 +3,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/ai_models.dart';
 import '../constants/app_constants.dart';
 
-
 /// 设置服务 - 管理应用配置
 class SettingsService extends GetxService {
   static SettingsService get to => Get.find();
@@ -163,14 +162,20 @@ class SettingsService extends GetxService {
     await _prefs.remove('tts_secret_key');
     await _prefs.remove('tts_api_url');
     await _prefs.remove('tts_resource_id');
+<<<<<<< HEAD
     await _prefs.remove(_keyVoiceType);
+=======
+>>>>>>> ffe1c78b74edfd90ad6a3dce3049b871fef80d2a
     
     appId.value = TtsConstants.appId;
     apiKey.value = TtsConstants.accessToken;
     secretKey.value = TtsConstants.secretKey;
     apiUrl.value = TtsConstants.apiUrl;
     resourceId.value = TtsConstants.resourceId;
+<<<<<<< HEAD
     voiceType.value = TtsConstants.defaultVoiceType;
+=======
+>>>>>>> ffe1c78b74edfd90ad6a3dce3049b871fef80d2a
   }
 
   // ==================== AI 配置方法 ====================

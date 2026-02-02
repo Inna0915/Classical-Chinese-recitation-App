@@ -1,10 +1,13 @@
 /// 火山引擎 TTS 音色列表 - 豆包语音合成模型 2.0
 /// 文档: https://www.volcengine.com/docs/6561/1257544
 
+<<<<<<< HEAD
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+=======
+>>>>>>> ffe1c78b74edfd90ad6a3dce3049b871fef80d2a
 /// 音色信息模型
 class TtsVoice {
   final String name;

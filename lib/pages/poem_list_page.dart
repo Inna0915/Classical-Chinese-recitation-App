@@ -4,12 +4,23 @@ import '../constants/app_constants.dart';
 import '../controllers/poem_controller.dart';
 import '../models/poem.dart';
 import '../models/poem_group.dart';
+import '../models/poem_group.dart';
 import 'add_poem_page.dart';
 import 'poem_detail_page.dart';
 
 /// 诗词列表页 - 书架式布局（带分组和拖拽）
 class PoemListPage extends StatefulWidget {
+/// 诗词列表页 - 书架式布局（带分组和拖拽）
+class PoemListPage extends StatefulWidget {
   const PoemListPage({super.key});
+
+  @override
+  State<PoemListPage> createState() => _PoemListPageState();
+}
+
+class _PoemListPageState extends State<PoemListPage> {
+  final PoemController controller = PoemController.to;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   State<PoemListPage> createState() => _PoemListPageState();
@@ -37,6 +48,7 @@ class _PoemListPageState extends State<PoemListPage> {
           ),
         ),
 
+
       ),
       body: Obx(() {
         if (controller.poems.isEmpty) {
@@ -45,11 +57,18 @@ class _PoemListPageState extends State<PoemListPage> {
 
         return CustomScrollView(
           controller: _scrollController,
+          controller: _scrollController,
           slivers: [
             // 书架标题区
             SliverToBoxAdapter(
               child: _buildBookshelfHeader(controller),
             ),
+
+            // 分组选择器
+            SliverToBoxAdapter(
+              child: _buildGroupSelector(controller),
+            ),
+
 
             // 分组选择器
             SliverToBoxAdapter(
@@ -69,6 +88,7 @@ class _PoemListPageState extends State<PoemListPage> {
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
                     final poem = controller.filteredPoems[index];
+                    final poem = controller.filteredPoems[index];
                     return _BookItem(
                       poem: poem,
                       onTap: () {
@@ -76,12 +96,15 @@ class _PoemListPageState extends State<PoemListPage> {
                         Get.to(() => const PoemDetailPage());
                       },
                       onLongPress: () => _showGroupMenu(context, poem),
+                      onLongPress: () => _showGroupMenu(context, poem),
                     );
                   },
+                  childCount: controller.filteredPoems.length,
                   childCount: controller.filteredPoems.length,
                 ),
               ),
             ),
+
 
             // 底部留白
             const SliverToBoxAdapter(
@@ -90,6 +113,7 @@ class _PoemListPageState extends State<PoemListPage> {
           ],
         );
       }),
+
 
       // 添加按钮
       floatingActionButton: FloatingActionButton.extended(
@@ -180,6 +204,7 @@ class _PoemListPageState extends State<PoemListPage> {
               ],
             ),
           ),
+
 
           // 搜索按钮
           Container(
@@ -840,6 +865,7 @@ class _PoemListPageState extends State<PoemListPage> {
   void _showSearchDialog(PoemController controller) {
     final searchController = TextEditingController();
 
+
     Get.dialog(
       AlertDialog(
         backgroundColor: const Color(UIConstants.cardColor),
@@ -914,10 +940,12 @@ class _BookItem extends StatelessWidget {
   final Poem poem;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onLongPress;
 
   const _BookItem({
     required this.poem,
     required this.onTap,
+    this.onLongPress,
     this.onLongPress,
   });
 
@@ -925,8 +953,11 @@ class _BookItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = PoemController.to;
 
+    final controller = PoemController.to;
+
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       onLongPress: onLongPress,
       child: Column(
         children: [
@@ -961,6 +992,7 @@ class _BookItem extends StatelessWidget {
                       ),
                     ),
 
+
                     // 装饰纹理
                     Positioned(
                       right: 0,
@@ -979,6 +1011,7 @@ class _BookItem extends StatelessWidget {
                         ),
                       ),
                     ),
+
 
                     // 内容
                     Padding(
@@ -1024,6 +1057,7 @@ class _BookItem extends StatelessWidget {
                       ),
                     ),
 
+
                     // 缓存标记
                     if (poem.localAudioPath != null)
                       Positioned(
@@ -1062,13 +1096,36 @@ class _BookItem extends StatelessWidget {
                             )
                           : const SizedBox.shrink()),
                     ),
+                      ),
+
+                    // 收藏标记
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Obx(() => controller.isFavorite(poem.id)
+                          ? Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.9),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.favorite,
+                                size: 14,
+                                color: Color(UIConstants.accentColor),
+                              ),
+                            )
+                          : const SizedBox.shrink()),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
 
+
           const SizedBox(height: 12),
+
 
           // 书名（下方）
           Text(
@@ -1083,7 +1140,9 @@ class _BookItem extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
 
+
           const SizedBox(height: 4),
+
 
           // 作者
           Text(

@@ -1846,4 +1846,246 @@ class _SettingsPageState extends State<SettingsPage> {
       isScrollControlled: true,
     );
   }
+
+  /// 显示 TTS 高级配置对话框
+  void _showTtsAdvancedConfig(SettingsService settings) {
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(UIConstants.defaultPadding),
+        decoration: const BoxDecoration(
+          color: Color(UIConstants.cardColor),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(UIConstants.defaultRadius),
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(UIConstants.dividerColor),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'TTS 高级配置',
+                style: TextStyle(
+                  fontFamily: FontConstants.chineseSerif,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '修改以下配置将影响语音合成功能',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(UIConstants.textSecondaryColor),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  children: [
+                    _buildConfigItem(
+                      'APP ID',
+                      settings.appId.value,
+                      Icons.app_registration,
+                      (value) => settings.saveAppId(value),
+                    ),
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    _buildConfigItem(
+                      'Access Token',
+                      settings.apiKey.value,
+                      Icons.key,
+                      (value) => settings.saveAccessToken(value),
+                      isSecret: true,
+                    ),
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    _buildConfigItem(
+                      'Secret Key',
+                      settings.secretKey.value,
+                      Icons.lock_outline,
+                      (value) => settings.saveSecretKey(value),
+                      isSecret: true,
+                    ),
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    _buildConfigItem(
+                      'API URL',
+                      settings.apiUrl.value,
+                      Icons.link,
+                      (value) => settings.saveApiUrl(value),
+                    ),
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    _buildConfigItem(
+                      'Resource ID',
+                      settings.resourceId.value,
+                      Icons.folder_outlined,
+                      (value) => settings.saveResourceId(value),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Get.back();
+                        _showResetTtsConfigConfirm(settings);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                      ),
+                      child: const Text('恢复默认'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => Get.back(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(UIConstants.accentColor),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('完成'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+      isScrollControlled: true,
+    );
+  }
+
+  Widget _buildConfigItem(
+    String label,
+    String value,
+    IconData icon,
+    Function(String) onSave, {
+    bool isSecret = false,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(UIConstants.textSecondaryColor)),
+      title: Text(label),
+      subtitle: Text(
+        isSecret ? '\${value.substring(0, value.length > 8 ? 8 : value.length)}****' : value,
+        style: const TextStyle(fontSize: 12),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.copy, size: 18),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: value));
+              Get.snackbar(
+                '已复制',
+                '\$label 已复制到剪贴板',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+          ),
+          const Icon(Icons.chevron_right),
+        ],
+      ),
+      onTap: () => _showEditConfigDialog(label, value, onSave, isSecret: isSecret),
+    );
+  }
+
+  void _showEditConfigDialog(
+    String label,
+    String currentValue,
+    Function(String) onSave, {
+    bool isSecret = false,
+  }) {
+    final controller = TextEditingController(text: currentValue);
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(UIConstants.cardColor),
+        title: Text('修改 \$label'),
+        content: TextField(
+          controller: controller,
+          obscureText: isSecret,
+          decoration: InputDecoration(
+            hintText: '输入 \$label',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          maxLines: isSecret ? 1 : 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              onSave(controller.text.trim());
+              Get.back();
+              Get.snackbar(
+                '已保存',
+                '\$label 已更新',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(UIConstants.accentColor),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetTtsConfigConfirm(SettingsService settings) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(UIConstants.cardColor),
+        title: const Text('恢复默认配置'),
+        content: const Text('确定要恢复 TTS 默认配置吗？这将覆盖您自定义的设置。'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              settings.resetTtsConfig();
+              Get.back();
+              Get.snackbar(
+                '已恢复',
+                'TTS 配置已恢复为默认值',
+                snackPosition: SnackPosition.BOTTOM,
+                backgroundColor: Colors.green,
+                colorText: Colors.white,
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('恢复'),
+          ),
+        ],
+      ),
+    );
+  }
 }

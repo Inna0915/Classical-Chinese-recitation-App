@@ -1,15 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../constants/app_constants.dart';
 import '../constants/tts_voices.dart';
+import '../constants/tts_voices.dart';
 import '../models/poem.dart';
 import 'database_helper.dart';
+import 'settings_service.dart';
 import 'settings_service.dart';
 
 /// TTS 服务结果状态
@@ -106,6 +110,45 @@ class AudioParams {
 /// TTS 服务类 - 火山引擎 TTS v3 API
 /// 
 /// 文档：https://www.volcengine.com/docs/6561/196768
+/// 音频参数配置
+class AudioParams {
+  final String format;
+  final int sampleRate;
+  final int? bitRate;
+  final int speechRate;
+  final int loudnessRate;
+  final String? emotion;
+  final int emotionScale;
+
+  const AudioParams({
+    this.format = 'mp3',
+    this.sampleRate = 24000,
+    this.bitRate,
+    this.speechRate = 0,
+    this.loudnessRate = 0,
+    this.emotion,
+    this.emotionScale = 4,
+  });
+
+  Map<String, dynamic> toJson() {
+    final json = <String, dynamic>{
+      'format': format,
+      'sample_rate': sampleRate,
+    };
+    if (bitRate != null) json['bit_rate'] = bitRate;
+    if (speechRate != 0) json['speech_rate'] = speechRate;
+    if (loudnessRate != 0) json['loudness_rate'] = loudnessRate;
+    if (emotion != null) {
+      json['emotion'] = emotion;
+      json['emotion_scale'] = emotionScale;
+    }
+    return json;
+  }
+}
+
+/// TTS 服务类 - 火山引擎 TTS v3 API
+/// 
+/// 文档：https://www.volcengine.com/docs/6561/196768
 class TtsService {
   static final TtsService _instance = TtsService._internal();
   factory TtsService() => _instance;
@@ -114,6 +157,7 @@ class TtsService {
   final DatabaseHelper _db = DatabaseHelper.instance;
   final Dio _dio = Dio();
   
+  /// 当前正在进行的请求（用于取消）
   /// 当前正在进行的请求（用于取消）
   CancelToken? _currentCancelToken;
   
@@ -148,6 +192,8 @@ class TtsService {
         Duration(seconds: TtsConstants.connectTimeout);
     _dio.options.receiveTimeout = 
         Duration(seconds: TtsConstants.receiveTimeout);
+    // 接受所有状态码，自行处理
+    _dio.options.validateStatus = (status) => true;
     // 接受所有状态码，自行处理
     _dio.options.validateStatus = (status) => true;
     
@@ -190,6 +236,7 @@ class TtsService {
 
   /// 测试 TTS 连接
   /// 
+  /// 发送一个简单的测试请求，验证 API 配置和连接是否正常
   /// 发送一个简单的测试请求，验证 API 配置和连接是否正常
   Future<TtsTestResult> testConnection() async {
     try {
@@ -307,6 +354,7 @@ class TtsService {
           isSuccess: false,
           statusCode: 401,
           errorMessage: '认证失败，请检查 APP ID 和 Access Token 是否正确',
+          errorMessage: '认证失败，请检查 APP ID 和 Access Token 是否正确',
         );
       } else if (response.statusCode == 403) {
         // 读取错误响应体
@@ -333,6 +381,11 @@ class TtsService {
               '2. 资源 ID (Resource ID) 不正确\n'
               '3. 账号未开通该服务权限\n\n'
               '请检查设置中的 TTS 配置信息',
+          errorMessage: errorDetail ?? '认证失败(403)\n\n可能原因：\n'
+              '1. APP ID 或 Access Token 错误\n'
+              '2. 资源 ID (Resource ID) 不正确\n'
+              '3. 账号未开通该服务权限\n\n'
+              '请检查设置中的 TTS 配置信息',
         );
       } else if (response.statusCode == 429) {
         _addLog('===================================');
@@ -348,6 +401,7 @@ class TtsService {
         return TtsTestResult(
           isSuccess: false,
           statusCode: response.statusCode,
+          errorMessage: '服务器错误: ${response.statusCode}',
           errorMessage: '服务器错误: ${response.statusCode}',
         );
       }
@@ -561,9 +615,50 @@ class TtsService {
     Poem poem, {
     String? voiceType,
     AudioParams? audioParams,
+    String? voiceType,
+    AudioParams? audioParams,
     Function(double)? onProgress,
   }) async {
     try {
+      final text = '${poem.title}。${poem.author}。${poem.content.replaceAll('\n', '。')}';
+      
+      // 流式合成音频
+      final audioBytes = await _synthesizeAudio(
+        text,
+        voiceType: voiceType,
+        audioParams: audioParams,
+        onProgress: onProgress,
+      );
+      
+      if (audioBytes.isEmpty) {
+        return TtsResult(
+          status: TtsResultStatus.apiError,
+          errorMessage: '合成音频数据为空',
+        );
+      }
+      
+      // Web 平台：直接返回音频数据，不保存到文件
+      if (kIsWeb) {
+        return TtsResult(
+          status: TtsResultStatus.success,
+          audioBytes: audioBytes,
+        );
+      }
+      
+      // 移动端：保存到本地文件
+      final audioPath = await _saveAudioFile(poem.id, audioBytes);
+      
+      if (audioPath != null) {
+        await _db.updateAudioPath(poem.id, audioPath);
+        
+        return TtsResult(
+          status: TtsResultStatus.success,
+          audioPath: audioPath,
+        );
+      } else {
+        return TtsResult(
+          status: TtsResultStatus.fileError,
+          errorMessage: '保存音频文件失败',
       final text = '${poem.title}。${poem.author}。${poem.content.replaceAll('\n', '。')}';
       
       // 流式合成音频
@@ -609,6 +704,7 @@ class TtsService {
       if (CancelToken.isCancel(e)) {
         return TtsResult(
           status: TtsResultStatus.cancelled,
+          errorMessage: '合成已取消',
           errorMessage: '合成已取消',
         );
       }
@@ -656,6 +752,8 @@ class TtsService {
     Poem poem, {
     String? voiceType,
     AudioParams? audioParams,
+    String? voiceType,
+    AudioParams? audioParams,
     bool forceDownload = false,
     Function(double)? onProgress,
   }) async {
@@ -675,10 +773,18 @@ class TtsService {
       audioParams: audioParams,
       onProgress: onProgress,
     );
+    return await _downloadAudioFromApi(
+      poem,
+      voiceType: voiceType,
+      audioParams: audioParams,
+      onProgress: onProgress,
+    );
   }
 
   /// 取消当前请求
+  /// 取消当前请求
   void cancelDownload() {
+    _currentCancelToken?.cancel('用户取消');
     _currentCancelToken?.cancel('用户取消');
     _currentCancelToken = null;
   }
@@ -744,6 +850,21 @@ class TtsService {
     } catch (e) {
       return 0.0;
     }
+  }
+
+  /// 检测是否为 CORS 错误（Web 平台）
+  bool _isCorsError(DioException e) {
+    if (!kIsWeb) return false;
+    
+    final errorStr = e.toString().toLowerCase();
+    final message = e.message?.toLowerCase() ?? '';
+    
+    // CORS 错误的常见特征
+    return errorStr.contains('cors') ||
+           errorStr.contains('cross-origin') ||
+           message.contains('xmlhttprequest') ||
+           (e.response?.statusCode == 404 && e.requestOptions.method == 'OPTIONS') ||
+           (e.type == DioExceptionType.badResponse && e.response == null);
   }
 
   /// 检测是否为 CORS 错误（Web 平台）

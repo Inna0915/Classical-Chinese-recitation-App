@@ -5,3 +5,15 @@
 **/.gradle/ 
 local.properties 
 "/assets/fonts/Noto_Serif_SC.zip" 
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+build/
+
+# IDE
+.idea/
+.vscode/
+
+# 系统文件
+*.log
