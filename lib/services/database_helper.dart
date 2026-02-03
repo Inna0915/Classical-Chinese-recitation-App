@@ -98,11 +98,14 @@ class DatabaseHelper {
 
     // 预置一些经典古诗数据
     await _insertDefaultPoems(db);
+    
+    // 创建语音缓存表
+    await _createVoiceCacheTable(db);
   }
 
   /// 数据库升级
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion == 1 && newVersion == 2) {
+    if (oldVersion < 2) {
       // 版本 1 升级到 2：添加新字段和新表
       
       // 添加 group_id 字段到 poems 表
@@ -134,9 +137,20 @@ class DatabaseHelper {
 
       // 插入默认分组
       await _insertDefaultGroups(db);
-      
-      // 创建语音缓存表
+    }
+    
+    if (oldVersion < 3) {
+      // 版本 2 升级到 3：创建语音缓存表
       await _createVoiceCacheTable(db);
+    }
+    
+    if (oldVersion < 4) {
+      // 版本 3 升级到 4：确保语音缓存表存在（修复漏创建问题）
+      try {
+        await _createVoiceCacheTable(db);
+      } catch (e) {
+        // 表已存在会报错，忽略
+      }
     }
   }
   
@@ -333,7 +347,7 @@ class DatabaseHelper {
     final db = await database;
     final maps = await db.query(
       DatabaseConstants.poemsTable,
-      orderBy: 'id ASC',
+      orderBy: 'created_at DESC',
     );
     return maps.map((map) => Poem.fromMap(map)).toList();
   }
@@ -492,7 +506,7 @@ class DatabaseHelper {
       DatabaseConstants.poemsTable,
       where: 'group_id = ?',
       whereArgs: [groupId],
-      orderBy: 'id ASC',
+      orderBy: 'created_at DESC',
     );
     return maps.map((map) => Poem.fromMap(map)).toList();
   }

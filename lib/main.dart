@@ -4,12 +4,17 @@ import 'constants/app_constants.dart';
 import 'controllers/poem_controller.dart';
 import 'pages/main_page.dart';
 import 'services/settings_service.dart';
+import 'services/tts_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // 初始化服务
-  await Get.putAsync(() => SettingsService().init());
+  final settingsService = await Get.putAsync(() => SettingsService().init());
+  
+  // 同步音色设置到 TtsService
+  TtsService().setVoiceType(settingsService.voiceType.value);
+  
   Get.put(PoemController());
   
   runApp(const GuYunReaderApp());
@@ -91,7 +96,7 @@ class GuYunReaderApp extends StatelessWidget {
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: Color(UIConstants.cardColor),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: const Color(UIConstants.cardColor),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(UIConstants.defaultRadius),

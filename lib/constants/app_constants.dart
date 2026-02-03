@@ -60,7 +60,7 @@ class DatabaseConstants {
   static const String dbName = 'guyun_reader.db';
   
   /// 数据库版本
-  static const int dbVersion = 3;
+  static const int dbVersion = 4;
   
   /// 诗词表名
   static const String poemsTable = 'poems';

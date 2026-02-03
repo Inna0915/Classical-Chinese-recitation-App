@@ -7,6 +7,7 @@ import '../controllers/poem_controller.dart';
 import '../services/update_service.dart';
 import 'poem_list_page.dart';
 import 'favorites_page.dart';
+import 'groups_page.dart';
 import 'settings_page.dart';
 
 /// 主页面 - 带底部导航
@@ -54,6 +55,7 @@ class _MainPageState extends State<MainPage> {
             children: const [
               PoemListPage(),
               FavoritesPage(),
+              GroupsPage(),
             ],
           ),
           bottomNavigationBar: Container(
@@ -84,6 +86,12 @@ class _MainPageState extends State<MainPage> {
                       icon: Icons.favorite_outline,
                       activeIcon: Icons.favorite,
                       label: '收藏',
+                    ),
+                    _buildNavItem(
+                      index: 2,
+                      icon: Icons.folder_outlined,
+                      activeIcon: Icons.folder,
+                      label: '分组',
                     ),
                     // 设置按钮
                     _buildSettingsButton(),

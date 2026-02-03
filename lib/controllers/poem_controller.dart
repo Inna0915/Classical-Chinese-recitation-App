@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/poem.dart';
 import '../models/poem_group.dart';
 import '../models/tts_result.dart';
@@ -215,12 +218,21 @@ class PoemController extends GetxController {
     selectedGroupId.value = groupId ?? -1;
   }
 
-  /// 根据选中分组返回筛选后的诗词
+  /// 根据选中分组返回筛选后的诗词（按创建时间倒序）
   List<Poem> get filteredPoems {
+    List<Poem> result;
     if (selectedGroupId.value == -1) {
-      return poems;
+      result = poems.toList();
+    } else {
+      result = poems.where((p) => p.groupId == selectedGroupId.value).toList();
     }
-    return poems.where((p) => p.groupId == selectedGroupId.value).toList();
+    // 按创建时间倒序排序，新添加的在前
+    result.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(2000);
+      final bTime = b.createdAt ?? DateTime(2000);
+      return bTime.compareTo(aTime);
+    });
+    return result;
   }
 
   /// 添加新分组
@@ -360,23 +372,31 @@ class PoemController extends GetxController {
   /// 播放/暂停切换
   Future<void> togglePlay() async {
     final poem = currentPoem.value;
-    if (poem == null) return;
+    if (poem == null) {
+      errorMessage.value = '错误: 未选择诗词';
+      return;
+    }
+    
+    // 防止重复点击
+    if (playbackState.value == PlaybackState.loading) {
+      _ttsService.cancelDownload();
+      playbackState.value = PlaybackState.idle;
+      errorMessage.value = '已取消';
+      return;
+    }
 
     switch (playbackState.value) {
       case PlaybackState.idle:
       case PlaybackState.error:
         await _startPlay(poem);
         break;
-      case PlaybackState.loading:
-        // 加载中，可以取消
-        _ttsService.cancelDownload();
-        playbackState.value = PlaybackState.idle;
-        break;
       case PlaybackState.playing:
         await pause();
         break;
       case PlaybackState.paused:
         await resume();
+        break;
+      default:
         break;
     }
   }
@@ -387,37 +407,47 @@ class PoemController extends GetxController {
     downloadProgress.value = 0.0;
     errorMessage.value = '';
 
-    // 获取当前设置
-    final settings = SettingsService.to;
-    final audioParams = AudioParams(
-      speechRate: settings.speechRate.value,
-      loudnessRate: settings.loudnessRate.value,
-    );
-
-    final result = await _ttsService.getOrDownloadAudio(
-      poem,
-      voiceType: settings.voiceType.value,
-      audioParams: audioParams,
-      onProgress: (progress) {
-        downloadProgress.value = progress;
-      },
-    );
-
-    if (!result.isSuccess) {
-      playbackState.value = PlaybackState.error;
-      errorMessage.value = result.errorMessage ?? '播放失败';
-      return;
-    }
-
-    // 播放音频
     try {
-      if (kIsWeb) {
-        // Web 平台：使用字节数据播放
-        await _playAudioOnWeb(result);
-      } else {
-        // 移动端：使用本地文件播放
-        await _playAudioOnMobile(result, poem);
+      final settings = SettingsService.to;
+      
+      // 同步音色设置
+      _ttsService.setVoiceType(settings.voiceType.value);
+      
+      final audioParams = AudioParams(
+        speechRate: settings.speechRate.value,
+        loudnessRate: settings.loudnessRate.value,
+      );
+
+      // 构建朗读文本：标题 + 作者 + 内容
+      final poemText = '${poem.title}。${poem.dynasty != null ? '${poem.dynasty}·' : ''}${poem.author}。${poem.content}';
+      
+      final result = await _ttsService.synthesizeText(
+        text: poemText,
+        voiceType: settings.voiceType.value,
+        audioParams: audioParams,
+        poemId: poem.id,
+        onProgress: (progress) {
+          downloadProgress.value = progress;
+        },
+      );
+
+      if (!result.isSuccess) {
+        playbackState.value = PlaybackState.error;
+        errorMessage.value = result.errorMessage ?? '播放失败';
+        return;
       }
+
+      // 播放音频
+      if (_audioPlayer == null) {
+        _audioPlayer = AudioPlayer();
+        _initAudioPlayer();
+      }
+      
+      final file = File(result.audioPath!);
+      final bytes = await file.readAsBytes();
+      await _audioPlayer!.setSource(BytesSource(bytes));
+      await _audioPlayer!.resume();
+      
     } catch (e) {
       playbackState.value = PlaybackState.error;
       errorMessage.value = '播放失败: $e';
@@ -443,10 +473,35 @@ class PoemController extends GetxController {
 
   /// 移动端播放音频
   Future<void> _playAudioOnMobile(TtsResult result, Poem poem) async {
-    if (_audioPlayer == null) return;
+    print('【播放】移动端播放, audioPlayer=$_audioPlayer, path=${result.audioPath}');
     
-    await _audioPlayer!.setSourceDeviceFile(result.audioPath!);
-    await _audioPlayer!.resume();
+    if (_audioPlayer == null) {
+      print('【播放】错误: AudioPlayer 为 null');
+      throw Exception('播放器未初始化');
+    }
+    
+    if (result.audioPath == null || result.audioPath!.isEmpty) {
+      print('【播放】错误: 音频路径为空');
+      throw Exception('音频路径为空');
+    }
+    
+    final file = File(result.audioPath!);
+    if (!await file.exists()) {
+      print('【播放】错误: 音频文件不存在: ${result.audioPath}');
+      throw Exception('音频文件不存在');
+    }
+    
+    print('【播放】文件大小: ${await file.length()} bytes');
+    
+    try {
+      await _audioPlayer!.setSourceDeviceFile(result.audioPath!);
+      print('【播放】设置音频源成功');
+      await _audioPlayer!.resume();
+      print('【播放】开始播放');
+    } catch (e) {
+      print('【播放】播放失败: $e');
+      rethrow;
+    }
     
     // 更新当前诗词的缓存状态（如果有变化）
     if (poem.localAudioPath != result.audioPath) {
@@ -503,5 +558,49 @@ class PoemController extends GetxController {
   /// 获取缓存大小
   Future<double> getCacheSize() async {
     return await _ttsService.getCacheSize();
+  }
+
+  // ==================== 分组顺序播放 ====================
+
+  /// 按分组顺序播放
+  Future<void> playGroupInOrder(List<Poem> poems) async {
+    if (poems.isEmpty) {
+      Get.snackbar(
+        '提示',
+        '该分组没有诗词',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    // 获取最近使用的音色
+    final settings = SettingsService.to;
+    final lastUsedVoice = settings.voiceType.value;
+
+    // 顺序播放
+    for (int i = 0; i < poems.length; i++) {
+      final poem = poems[i];
+      
+      // 选择当前诗词
+      selectPoem(poem);
+      
+      // 开始播放
+      await _startPlay(poem);
+      
+      // 等待播放完成
+      while (playbackState.value == PlaybackState.playing) {
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+      
+      // 如果用户停止播放，退出循环
+      if (playbackState.value == PlaybackState.idle) {
+        break;
+      }
+      
+      // 播放下一首前的间隔
+      if (i < poems.length - 1) {
+        await Future.delayed(const Duration(seconds: 2));
+      }
+    }
   }
 }
