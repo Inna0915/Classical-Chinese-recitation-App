@@ -66,6 +66,8 @@ class DatabaseHelper {
         author TEXT NOT NULL,
         dynasty TEXT,
         content TEXT NOT NULL,
+        clean_content TEXT,
+        annotated_content TEXT,
         local_audio_path TEXT,
         group_id INTEGER,
         is_favorite INTEGER DEFAULT 0,
@@ -152,6 +154,46 @@ class DatabaseHelper {
         // 表已存在会报错，忽略
       }
     }
+    
+    if (oldVersion < 5) {
+      // 版本 4 升级到 5：添加双视图内容字段
+      try {
+        await db.execute('''
+          ALTER TABLE ${DatabaseConstants.poemsTable} 
+          ADD COLUMN clean_content TEXT
+        ''');
+      } catch (e) {
+        // 字段已存在会报错，忽略
+      }
+      
+      try {
+        await db.execute('''
+          ALTER TABLE ${DatabaseConstants.poemsTable} 
+          ADD COLUMN annotated_content TEXT
+        ''');
+      } catch (e) {
+        // 字段已存在会报错，忽略
+      }
+      
+      // 迁移旧数据：将 content 复制到 clean_content
+      await db.execute('''
+        UPDATE ${DatabaseConstants.poemsTable} 
+        SET clean_content = content 
+        WHERE clean_content IS NULL OR clean_content = ''
+      ''');
+    }
+    
+    if (oldVersion < 6) {
+      // 版本 5 升级到 6：添加时间戳路径字段
+      try {
+        await db.execute('''
+          ALTER TABLE ${DatabaseConstants.voiceCacheTable} 
+          ADD COLUMN timestamp_path TEXT
+        ''');
+      } catch (e) {
+        // 字段已存在会报错，忽略
+      }
+    }
   }
   
   /// 创建语音缓存表
@@ -162,6 +204,7 @@ class DatabaseHelper {
         poem_id INTEGER NOT NULL,
         voice_type TEXT NOT NULL,
         file_path TEXT NOT NULL,
+        timestamp_path TEXT,
         file_size INTEGER DEFAULT 0,
         created_at TEXT,
         UNIQUE(poem_id, voice_type)
@@ -223,6 +266,7 @@ class DatabaseHelper {
         'author': '李白',
         'dynasty': '唐',
         'content': '床前明月光，疑是地上霜。\n举头望明月，低头思故乡。',
+        'clean_content': '床前明月光，疑是地上霜。\n举头望明月，低头思故乡。',
         'local_audio_path': null,
         'group_id': null,
         'is_favorite': 0,
@@ -234,6 +278,7 @@ class DatabaseHelper {
         'author': '孟浩然',
         'dynasty': '唐',
         'content': '春眠不觉晓，处处闻啼鸟。\n夜来风雨声，花落知多少。',
+        'clean_content': '春眠不觉晓，处处闻啼鸟。\n夜来风雨声，花落知多少。',
         'local_audio_path': null,
         'group_id': null,
         'is_favorite': 0,
@@ -245,6 +290,7 @@ class DatabaseHelper {
         'author': '王之涣',
         'dynasty': '唐',
         'content': '白日依山尽，黄河入海流。\n欲穷千里目，更上一层楼。',
+        'clean_content': '白日依山尽，黄河入海流。\n欲穷千里目，更上一层楼。',
         'local_audio_path': null,
         'group_id': null,
         'is_favorite': 0,
@@ -256,6 +302,7 @@ class DatabaseHelper {
         'author': '柳宗元',
         'dynasty': '唐',
         'content': '千山鸟飞绝，万径人踪灭。\n孤舟蓑笠翁，独钓寒江雪。',
+        'clean_content': '千山鸟飞绝，万径人踪灭。\n孤舟蓑笠翁，独钓寒江雪。',
         'local_audio_path': null,
         'group_id': null,
         'is_favorite': 0,
@@ -267,6 +314,7 @@ class DatabaseHelper {
         'author': '李白',
         'dynasty': '唐',
         'content': '日照香炉生紫烟，遥看瀑布挂前川。\n飞流直下三千尺，疑是银河落九天。',
+        'clean_content': '日照香炉生紫烟，遥看瀑布挂前川。\n飞流直下三千尺，疑是银河落九天。',
         'local_audio_path': null,
         'group_id': null,
         'is_favorite': 0,
@@ -278,6 +326,7 @@ class DatabaseHelper {
         'author': '李白',
         'dynasty': '唐',
         'content': '朝辞白帝彩云间，千里江陵一日还。\n两岸猿声啼不住，轻舟已过万重山。',
+        'clean_content': '朝辞白帝彩云间，千里江陵一日还。\n两岸猿声啼不住，轻舟已过万重山。',
         'local_audio_path': null,
         'group_id': null,
         'is_favorite': 0,
@@ -289,6 +338,7 @@ class DatabaseHelper {
         'author': '白居易',
         'dynasty': '唐',
         'content': '离离原上草，一岁一枯荣。\n野火烧不尽，春风吹又生。\n远芳侵古道，晴翠接荒城。\n又送王孙去，萋萋满别情。',
+        'clean_content': '离离原上草，一岁一枯荣。\n野火烧不尽，春风吹又生。\n远芳侵古道，晴翠接荒城。\n又送王孙去，萋萋满别情。',
         'local_audio_path': null,
         'group_id': null,
         'is_favorite': 0,
@@ -300,6 +350,7 @@ class DatabaseHelper {
         'author': '杜牧',
         'dynasty': '唐',
         'content': '清明时节雨纷纷，路上行人欲断魂。\n借问酒家何处有？牧童遥指杏花村。',
+        'clean_content': '清明时节雨纷纷，路上行人欲断魂。\n借问酒家何处有？牧童遥指杏花村。',
         'local_audio_path': null,
         'group_id': null,
         'is_favorite': 0,
@@ -311,6 +362,7 @@ class DatabaseHelper {
         'author': '王维',
         'dynasty': '唐',
         'content': '红豆生南国，春来发几枝。\n愿君多采撷，此物最相思。',
+        'clean_content': '红豆生南国，春来发几枝。\n愿君多采撷，此物最相思。',
         'local_audio_path': null,
         'group_id': null,
         'is_favorite': 0,
@@ -322,6 +374,7 @@ class DatabaseHelper {
         'author': '苏轼',
         'dynasty': '宋',
         'content': '明月几时有？把酒问青天。\n不知天上宫阙，今夕是何年。\n我欲乘风归去，又恐琼楼玉宇，高处不胜寒。\n起舞弄清影，何似在人间。\n\n转朱阁，低绮户，照无眠。\n不应有恨，何事长向别时圆？\n人有悲欢离合，月有阴晴圆缺，此事古难全。\n但愿人长久，千里共婵娟。',
+        'clean_content': '明月几时有？把酒问青天。\n不知天上宫阙，今夕是何年。\n我欲乘风归去，又恐琼楼玉宇，高处不胜寒。\n起舞弄清影，何似在人间。\n\n转朱阁，低绮户，照无眠。\n不应有恨，何事长向别时圆？\n人有悲欢离合，月有阴晴圆缺，此事古难全。\n但愿人长久，千里共婵娟。',
         'local_audio_path': null,
         'group_id': null,
         'is_favorite': 0,

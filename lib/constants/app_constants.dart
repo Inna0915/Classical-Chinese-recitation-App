@@ -60,7 +60,7 @@ class DatabaseConstants {
   static const String dbName = 'guyun_reader.db';
   
   /// 数据库版本
-  static const int dbVersion = 4;
+  static const int dbVersion = 6;
   
   /// 诗词表名
   static const String poemsTable = 'poems';
@@ -75,34 +75,40 @@ class DatabaseConstants {
   static const String audioCacheDir = 'audio_cache';
 }
 
-/// UI 常量
+/// UI 常量 - WeChat-like Minimalism (微信式极简) + New Chinese Aesthetics (新中式)
 class UIConstants {
-  /// 主题色 - 墨黑
-  static const int primaryColor = 0xFF2C2C2C;
+  /// 主题色 - 接近纯黑
+  static const int primaryColor = 0xFF1A1A1A;
   
-  /// 背景色 - 米白
-  static const int backgroundColor = 0xFFF7F5F0;
+  /// 页面背景色 - 微信同款浅灰
+  static const int backgroundColor = 0xFFF7F7F7;
   
-  /// 卡片背景色 - 宣纸白
-  static const int cardColor = 0xFFFAF8F3;
+  /// 卡片背景色 - 纯白
+  static const int cardColor = 0xFFFFFFFF;
   
-  /// 文字主色 - 玄黑
+  /// 文字主色 - 接近纯黑但柔和
   static const int textPrimaryColor = 0xFF1A1A1A;
   
-  /// 文字次色 - 灰黑
-  static const int textSecondaryColor = 0xFF666666;
+  /// 文字次色 - 中灰
+  static const int textSecondaryColor = 0xFF888888;
   
   /// 强调色 - 朱砂红
-  static const int accentColor = 0xFFC45C48;
+  static const int accentColor = 0xFFC93836;
   
-  /// 分割线颜色
-  static const int dividerColor = 0xFFE8E4DC;
+  /// 分割线颜色 - 浅灰
+  static const int dividerColor = 0xFFE5E5E5;
+  
+  /// 统一圆角 - 12.0
+  static const double defaultRadius = 12.0;
+  
+  /// 卡片水平边距
+  static const double cardHorizontalMargin = 16.0;
+  
+  /// 卡片垂直边距
+  static const double cardVerticalMargin = 8.0;
   
   /// 默认内边距
-  static const double defaultPadding = 24.0;
-  
-  /// 默认圆角
-  static const double defaultRadius = 12.0;
+  static const double defaultPadding = 16.0;
 }
 
 /// 字体配置

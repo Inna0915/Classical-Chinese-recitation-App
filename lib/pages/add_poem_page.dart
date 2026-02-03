@@ -23,6 +23,8 @@ class _AddPoemPageState extends State<AddPoemPage> {
   final _authorController = TextEditingController();
   final _contentController = TextEditingController();
   final _dynastyController = TextEditingController(text: '唐');
+  final _cleanContentController = TextEditingController();
+  final _annotatedContentController = TextEditingController();
   final _aiInputController = TextEditingController();
   
   bool _isLoading = false;
@@ -41,6 +43,8 @@ class _AddPoemPageState extends State<AddPoemPage> {
     _authorController.dispose();
     _contentController.dispose();
     _dynastyController.dispose();
+    _cleanContentController.dispose();
+    _annotatedContentController.dispose();
     _aiInputController.dispose();
     super.dispose();
   }
@@ -116,12 +120,21 @@ class _AddPoemPageState extends State<AddPoemPage> {
     try {
       final id = DateTime.now().millisecondsSinceEpoch;
       
+      // 如果没有 cleanContent，使用 content 作为 fallback
+      final cleanContent = _cleanContentController.text.trim().isNotEmpty
+          ? _cleanContentController.text.trim()
+          : _contentController.text.trim();
+      
       final poem = Poem(
         id: id,
         title: _titleController.text.trim(),
         author: _authorController.text.trim(),
         dynasty: _dynastyController.text.trim(),
         content: _contentController.text.trim(),
+        cleanContent: cleanContent,
+        annotatedContent: _annotatedContentController.text.trim().isNotEmpty
+            ? _annotatedContentController.text.trim()
+            : null,
         createdAt: DateTime.now(),
       );
 
@@ -195,6 +208,12 @@ class _AddPoemPageState extends State<AddPoemPage> {
       }
       if (poemData['content']?.isNotEmpty == true) {
         _contentController.text = poemData['content']!;
+      }
+      if (poemData['cleanContent']?.isNotEmpty == true) {
+        _cleanContentController.text = poemData['cleanContent']!;
+      }
+      if (poemData['annotatedContent']?.isNotEmpty == true) {
+        _annotatedContentController.text = poemData['annotatedContent']!;
       }
       _aiRawResponse = result.content;
     });

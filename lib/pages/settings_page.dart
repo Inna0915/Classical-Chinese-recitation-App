@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../constants/ai_models.dart';
 import '../constants/ai_prompts.dart';
 import '../constants/app_constants.dart';
+import '../constants/changelog.dart';
 import '../constants/tts_voices.dart';
 import '../controllers/poem_controller.dart';
 import '../services/settings_service.dart';
@@ -362,37 +363,133 @@ class _SettingsPageState extends State<SettingsPage> {
           
           const Divider(height: 1, indent: 16, endIndent: 16),
           
-          ListTile(
-            leading: const Icon(
-              Icons.chat_bubble_outline,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: const Text('自定义提示词'),
-            subtitle: Obx(() => Text(
-              settings.customPrompt.value.isEmpty ? '使用默认提示词' : '已自定义',
-              style: const TextStyle(fontSize: 12),
-            )),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showCustomPromptDialog(settings),
-          ),
+          // 自定义提示词（展开式）
+          _buildExpandablePromptTile(settings),
           
           const Divider(height: 1, indent: 16, endIndent: 16),
           
-          ListTile(
-            leading: const Icon(
-              Icons.tune_outlined,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: const Text('高级配置'),
-            subtitle: const Text(
-              '查看和修改 API 地址等配置',
-              style: TextStyle(fontSize: 12),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showAIAdvancedConfig(settings),
-          ),
+          // 高级配置（展开式）
+          _buildExpandableAdvancedTile(settings),
         ],
       ),
+    );
+  }
+
+  /// 可展开的自定义提示词配置
+  Widget _buildExpandablePromptTile(SettingsService settings) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        final controller = TextEditingController(text: settings.customPrompt.value);
+        return ExpansionTile(
+          leading: const Icon(
+            Icons.chat_bubble_outline,
+            color: Color(UIConstants.textSecondaryColor),
+          ),
+          title: const Text('自定义提示词'),
+          subtitle: Obx(() => Text(
+            settings.customPrompt.value.isEmpty ? '使用默认提示词' : '已自定义',
+            style: const TextStyle(fontSize: 12),
+          )),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    onChanged: (value) => settings.saveCustomPrompt(value.trim()),
+                    decoration: InputDecoration(
+                      hintText: '输入自定义提示词...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    maxLines: 5,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          controller.clear();
+                          settings.saveCustomPrompt('');
+                          Get.snackbar(
+                            '已恢复',
+                            '使用默认提示词',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        },
+                        icon: const Icon(Icons.restore, size: 16),
+                        label: const Text('恢复默认'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+  
+  /// 可展开的高级配置
+  Widget _buildExpandableAdvancedTile(SettingsService settings) {
+    return StatefulBuilder(
+      builder: (context, setState) {
+        final controller = TextEditingController(text: settings.aiApiUrl.value);
+        return ExpansionTile(
+          leading: const Icon(
+            Icons.tune_outlined,
+            color: Color(UIConstants.textSecondaryColor),
+          ),
+          title: const Text('高级配置'),
+          subtitle: const Text(
+            '查看和修改 API 地址',
+            style: TextStyle(fontSize: 12),
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    onChanged: (value) => settings.saveAIApiUrl(value.trim()),
+                    decoration: InputDecoration(
+                      labelText: 'API 地址',
+                      hintText: '输入 API 地址',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      TextButton.icon(
+                        onPressed: () {
+                          controller.clear();
+                          settings.saveAIApiUrl('');
+                          Get.snackbar(
+                            '已恢复',
+                            '使用默认 API 地址',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        },
+                        icon: const Icon(Icons.restore, size: 16),
+                        label: const Text('恢复默认'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -450,18 +547,100 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       child: Column(
         children: [
-          const ListTile(
-            leading: Icon(
+          // 版本信息（展开式）
+          ExpansionTile(
+            leading: const Icon(
               Icons.info_outline,
               color: Color(UIConstants.textSecondaryColor),
             ),
-            title: Text('应用版本'),
+            title: const Text('应用版本'),
             subtitle: Text(
-              'v1.0.0',
+              '${Changelog.currentVersion} (${Changelog.currentDate})',
+              style: const TextStyle(fontSize: 12),
+            ),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '当前版本更新内容：',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...Changelog.currentChanges.map((change) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        change,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    )),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () => _showFullChangelog(),
+                      child: const Text('查看完整更新记录'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          
+          // 作者信息
+          const ListTile(
+            leading: Icon(
+              Icons.person_outline,
+              color: Color(UIConstants.textSecondaryColor),
+            ),
+            title: Text('作者'),
+            subtitle: Text(
+              'wong · 给宝贝儿子桐桐',
               style: TextStyle(fontSize: 12),
             ),
           ),
+          
           const Divider(height: 1, indent: 16, endIndent: 16),
+          
+          // GitHub 仓库
+          ListTile(
+            leading: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.code,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+            title: const Text('GitHub 仓库'),
+            subtitle: const Text(
+              'github.com/Inna0915/Classical-Chinese-recitation-App',
+              style: TextStyle(fontSize: 11),
+            ),
+            trailing: const Icon(Icons.open_in_new, size: 18),
+            onTap: () async {
+              const url = 'https://github.com/Inna0915/Classical-Chinese-recitation-App';
+              await Clipboard.setData(const ClipboardData(text: url));
+              Get.snackbar(
+                '已复制',
+                '仓库地址已复制到剪贴板',
+                snackPosition: SnackPosition.BOTTOM,
+              );
+            },
+          ),
+          
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          
           ListTile(
             leading: const Icon(
               Icons.description_outlined,
@@ -474,6 +653,52 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _showLicenseDialog(),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  /// 显示完整更新记录
+  void _showFullChangelog() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(UIConstants.cardColor),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
+        ),
+        title: const Text(
+          '更新记录',
+          style: TextStyle(
+            fontFamily: FontConstants.chineseSerif,
+            color: Color(UIConstants.textPrimaryColor),
+          ),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: MediaQuery.of(Get.context!).size.height * 0.6,
+          child: ListView.builder(
+            itemCount: Changelog.versions.length,
+            itemBuilder: (context, index) {
+              final version = Changelog.versions[index];
+              return ExpansionTile(
+                title: Text('${version.version} (${version.date})'),
+                children: version.changes.map((change) => ListTile(
+                  dense: true,
+                  leading: const SizedBox(width: 24),
+                  title: Text(
+                    change,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                )).toList(),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('关闭'),
           ),
         ],
       ),
@@ -1276,6 +1501,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _showAIApiKeyDialog(SettingsService settings) {
     final controller = TextEditingController(text: settings.aiApiKey.value);
+    final isKeyVisible = false.obs;
     
     Get.dialog(
       AlertDialog(
@@ -1290,16 +1516,24 @@ class _SettingsPageState extends State<SettingsPage> {
             color: Color(UIConstants.textPrimaryColor),
           ),
         ),
-        content: TextField(
+        content: Obx(() => TextField(
           controller: controller,
-          obscureText: true,
+          obscureText: !isKeyVisible.value,
           decoration: InputDecoration(
             hintText: '输入 API Key',
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
             ),
+            suffixIcon: IconButton(
+              icon: Icon(
+                isKeyVisible.value ? Icons.visibility_off : Icons.visibility,
+                size: 20,
+                color: const Color(UIConstants.textSecondaryColor),
+              ),
+              onPressed: () => isKeyVisible.toggle(),
+            ),
           ),
-        ),
+        )),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
@@ -1362,180 +1596,6 @@ class _SettingsPageState extends State<SettingsPage> {
             ));
           }).toList(),
         ),
-      ),
-    );
-  }
-
-  void _showCustomPromptDialog(SettingsService settings) {
-    final controller = TextEditingController(text: settings.customPrompt.value);
-    
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(UIConstants.defaultPadding),
-        decoration: const BoxDecoration(
-          color: Color(UIConstants.cardColor),
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(UIConstants.defaultRadius),
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '自定义提示词',
-                style: TextStyle(
-                  fontFamily: FontConstants.chineseSerif,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '留空则使用默认提示词',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(UIConstants.textSecondaryColor),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  hintText: '输入自定义提示词...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                maxLines: 5,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        settings.saveCustomPrompt('');
-                        Get.back();
-                        Get.snackbar(
-                          '已恢复',
-                          '使用默认提示词',
-                          snackPosition: SnackPosition.BOTTOM,
-                        );
-                      },
-                      child: const Text('恢复默认'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        settings.saveCustomPrompt(controller.text.trim());
-                        Get.back();
-                        Get.snackbar(
-                          '已保存',
-                          '自定义提示词已更新',
-                          snackPosition: SnackPosition.BOTTOM,
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(UIConstants.accentColor),
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('保存'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-      isScrollControlled: true,
-    );
-  }
-
-  void _showAIAdvancedConfig(SettingsService settings) {
-    Get.bottomSheet(
-      Container(
-        padding: const EdgeInsets.all(UIConstants.defaultPadding),
-        decoration: const BoxDecoration(
-          color: Color(UIConstants.cardColor),
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(UIConstants.defaultRadius),
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'AI 高级配置',
-                style: TextStyle(
-                  fontFamily: FontConstants.chineseSerif,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.link),
-                title: const Text('API 地址'),
-                subtitle: Obx(() => Text(
-                  settings.aiApiUrl.value,
-                  style: const TextStyle(fontSize: 12),
-                )),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _showEditAIUrlDialog(settings),
-              ),
-            ],
-          ),
-        ),
-      ),
-      isScrollControlled: true,
-    );
-  }
-
-  void _showEditAIUrlDialog(SettingsService settings) {
-    final controller = TextEditingController(text: settings.aiApiUrl.value);
-    
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        title: const Text('修改 API 地址'),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(
-            hintText: '输入 API 地址',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              settings.saveAIApiUrl(controller.text.trim());
-              Get.back();
-              Get.snackbar(
-                '已保存',
-                'API 地址已更新',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(UIConstants.accentColor),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('保存'),
-          ),
-        ],
       ),
     );
   }

@@ -64,6 +64,19 @@ class SubtitleInfo {
   }) : timestamp = timestamp ?? DateTime.now();
 }
 
+/// 合成结果内部类
+class _SynthesizeResult {
+  final File audioFile;
+  final String? timestampPath;
+  final List<TimestampItem>? timestamps;
+  
+  _SynthesizeResult({
+    required this.audioFile,
+    this.timestampPath,
+    this.timestamps,
+  });
+}
+
 /// 流式事件类型
 enum TtsStreamEventType {
   audio,      // 音频数据
@@ -229,42 +242,67 @@ class TtsService {
     AudioParams? audioParams,
     Function(double progress)? onProgress,
   }) async {
-    print('【TTS】synthesizeText 开始');
+    _addDebugLog('info', 'synthesizeText 开始', '开始TTS合成流程');
     await init();
 
     final voice = voiceType ?? _voiceType;
     final params = audioParams ?? const AudioParams();
-    print('【TTS】使用音色: $voice');
+    _addDebugLog('info', '使用音色', voice);
     
     // 按音色检查缓存
-    print('【TTS】检查缓存...');
+    _addDebugLog('info', '检查缓存', '查询音色缓存状态');
     final cached = await _db.getVoiceCache(poemId, voice);
-    print('【TTS】缓存查询完成: $cached');
+    _addDebugLog('info', '缓存查询完成', cached?.toString() ?? '无缓存');
     if (cached != null && await File(cached.filePath).exists()) {
-      print('【TTS】使用缓存文件: ${cached.filePath}');
+      _addDebugLog('info', '使用缓存文件', cached.filePath);
+      
+      // 加载时间戳数据
+      List<TimestampItem>? timestamps;
+      if (cached.timestampPath != null) {
+        final tsFile = File(cached.timestampPath!);
+        if (await tsFile.exists()) {
+          try {
+            final tsContent = await tsFile.readAsString();
+            final tsList = jsonDecode(tsContent) as List<dynamic>;
+            timestamps = tsList.map((item) => TimestampItem.fromJson(item as Map<String, dynamic>)).toList();
+            print('【TTS】=== 从缓存加载时间戳 ===');
+            print('【TTS】时间戳数量: ${timestamps.length} 条');
+            if (timestamps.isNotEmpty) {
+              print('【TTS】第一条: char="${timestamps.first.char}", start=${timestamps.first.startTime}ms, end=${timestamps.first.endTime}ms');
+              print('【TTS】最后一条: char="${timestamps.last.char}", start=${timestamps.last.startTime}ms, end=${timestamps.last.endTime}ms');
+            }
+            print('【TTS】===================');
+          } catch (e) {
+            _addDebugLog('error', '加载时间戳失败', e.toString());
+          }
+        }
+      }
+      
       onProgress?.call(1.0);
       return TtsResult.success(
         audioPath: cached.filePath,
+        timestampPath: cached.timestampPath,
+        timestamps: timestamps,
         isFromCache: true,
       );
     }
-    print('【TTS】无缓存，开始合成');
+    _addDebugLog('info', '无缓存', '开始TTS合成');
 
     // Synthesize audio
     _cancelToken = CancelToken();
     
     try {
-      print('【TTS】调用 _synthesize...');
-      final file = await _synthesize(
+      _addDebugLog('info', '调用_synthesize', '开始网络请求');
+      final result = await _synthesize(
         text,
         voiceType: voice,
         audioParams: params,
         onProgress: onProgress,
         cancelToken: _cancelToken,
       );
-      print('【TTS】_synthesize 返回: $file');
+      _addDebugLog('info', '_synthesize返回', result?.audioFile.path ?? 'null');
 
-      if (file == null) {
+      if (result == null) {
         return TtsResult.failure('合成失败');
       }
 
@@ -272,18 +310,23 @@ class TtsService {
       await _db.saveVoiceCache(VoiceCache(
         poemId: poemId,
         voiceType: voice,
-        filePath: file.path,
-        fileSize: await file.length(),
+        filePath: result.audioFile.path,
+        timestampPath: result.timestampPath,
+        fileSize: await result.audioFile.length(),
         createdAt: DateTime.now(),
       ));
 
-      return TtsResult.success(audioPath: file.path);
+      return TtsResult.success(
+        audioPath: result.audioFile.path,
+        timestampPath: result.timestampPath,
+        timestamps: result.timestamps,
+      );
     } on DioException catch (e) {
       final errorMsg = '网络错误: ${e.type} - ${e.message}';
-      print('【TTS】$errorMsg');
+      _addDebugLog('error', '网络错误', errorMsg);
       return TtsResult.failure(errorMsg);
     } catch (e) {
-      print('【TTS】未知错误: $e');
+      _addDebugLog('error', '未知错误', e.toString());
       return TtsResult.failure('合成失败: $e');
     } finally {
       _cancelToken = null;
@@ -304,7 +347,7 @@ class TtsService {
   }
 
   /// Synthesize text to audio file
-  Future<File?> _synthesize(
+  Future<_SynthesizeResult?> _synthesize(
     String text, {
     required String voiceType,
     required AudioParams audioParams,
@@ -314,7 +357,7 @@ class TtsService {
     final isVoice2 = _isVoice2(voiceType);
     final resourceId = isVoice2 ? 'seed-tts-2.0' : 'seed-tts-1.0';
     
-    print('【TTS】开始合成 - 音色: $voiceType, 资源ID: $resourceId');
+    _addDebugLog('info', '开始合成', '音色:$voiceType, 资源ID:$resourceId');
     _addDebugLog('info', '开始合成', '音色: $voiceType, 资源ID: $resourceId, 文本: ${text.substring(0, text.length > 20 ? 20 : text.length)}...');
     
     // For Web platform, use stream API
@@ -330,8 +373,8 @@ class TtsService {
     }
 
     try {
-      print('【TTS】构建请求参数...');
-      // 构建请求体
+      _addDebugLog('info', '构建请求参数', '准备HTTP请求体');
+      // 构建请求体 - 添加 with_timestamp 获取时间戳
       final reqParams = <String, dynamic>{
         'text': text,
         'speaker': voiceType,
@@ -340,6 +383,7 @@ class TtsService {
           'sample_rate': 24000,
           'speech_rate': audioParams.speechRate,
           'loudness_rate': audioParams.loudnessRate,
+          'with_timestamp': 1, // 开启时间戳
         },
       };
       
@@ -348,10 +392,7 @@ class TtsService {
         reqParams['model'] = 'seed-tts-1.1';
       }
       
-      print('【TTS】发送 HTTP 请求...');
-      print('【TTS】请求 URL: https://openspeech.bytedance.com/api/v3/tts/unidirectional');
-      print('【TTS】请求 Headers: X-Api-App-Id=${_appId.substring(0, 8)}..., X-Api-Resource-Id=$resourceId');
-      print('【TTS】请求 Body: ${jsonEncode({'user': {'uid': '388808087185088'}, 'req_params': reqParams})}');
+      _addDebugLog('request', '发送HTTP请求', 'URL: https://openspeech.bytedance.com/api/v3/tts/unidirectional\nHeaders: X-Api-App-Id=${_appId.substring(0, 8)}..., X-Api-Resource-Id=$resourceId\nBody: ${jsonEncode({'user': {'uid': '388808087185088'}, 'req_params': reqParams})}');
       
       final response;
       try {
@@ -376,16 +417,16 @@ class TtsService {
             'req_params': reqParams,
           },
         );
-        print('【TTS】收到响应: ${response.statusCode}');
+        _addDebugLog('response', '收到响应', '状态码: ${response.statusCode}');
       } on DioException catch (e) {
-        print('【TTS】DioException: ${e.type}, ${e.message}');
-        print('【TTS】Response: ${e.response}');
+        _addDebugLog('error', 'DioException', '${e.type}, ${e.message}\nResponse: ${e.response}');
         rethrow;
       }
 
       // 处理流式响应 - 使用缓冲区处理跨块的 NDJSON
-      print('【TTS】开始处理流式响应...');
+      _addDebugLog('info', '开始处理流式响应', '接收NDJSON数据流');
       final List<int> audioChunks = [];
+      final List<Map<String, dynamic>> timestampList = []; // 收集时间戳
       final stream = response.data as ResponseBody;
       final buffer = StringBuffer();
       int chunkCount = 0;
@@ -393,7 +434,10 @@ class TtsService {
       await for (final chunk in stream.stream) {
         chunkCount++;
         if (chunkCount % 10 == 0) {
-          print('【TTS】已接收 $chunkCount 个数据块');
+      // 每10个数据块记录一次
+      if (chunkCount % 10 == 0) {
+        _addDebugLog('info', '接收数据块', '已接收 $chunkCount 个数据块');
+      }
         }
         if (cancelToken?.isCancelled ?? false) break;
         
@@ -423,6 +467,50 @@ class TtsService {
               final audioBytes = base64Decode(data['data'] as String);
               audioChunks.addAll(audioBytes);
             }
+            // 处理时间戳数据 - 在 addition 字段中
+            else if (code == 0 && data['addition'] != null) {
+              _addDebugLog('response', '收到addition数据', jsonEncode(data['addition']));
+              final addition = data['addition'] as Map<String, dynamic>;
+              // 尝试多种可能的时间戳字段路径
+              final frontendMsg = addition['frontend_message'];
+              if (frontendMsg != null && frontendMsg is List) {
+                _addDebugLog('info', '找到frontend_message', '共 ${frontendMsg.length} 条');
+                // 解析字级别时间戳
+                for (final item in frontendMsg) {
+                  if (item is Map<String, dynamic>) {
+                    timestampList.add(item);
+                  }
+                }
+              }
+              // 备选：直接尝试 addition 中的其他字段
+              if (timestampList.isEmpty) {
+                final words = addition['words'] ?? addition['timestamps'] ?? addition['chars'];
+                if (words != null && words is List) {
+                  _addDebugLog('info', '找到备选时间戳字段', '共 ${words.length} 条');
+                  for (final item in words) {
+                    if (item is Map<String, dynamic>) {
+                      timestampList.add(item);
+                    }
+                  }
+                }
+              }
+              // 如果还是空的，打印 addition 的所有键
+              if (timestampList.isEmpty) {
+                _addDebugLog('info', 'addition字段keys', addition.keys.toList().toString());
+              }
+            }
+            // 备选：有些API版本可能直接在data中包含时间戳
+            else if (code == 0 && data['timestamps'] != null) {
+              _addDebugLog('info', '找到data.timestamps', '');
+              final ts = data['timestamps'];
+              if (ts is List) {
+                for (final item in ts) {
+                  if (item is Map<String, dynamic>) {
+                    timestampList.add(item);
+                  }
+                }
+              }
+            }
             // 处理错误码
             else if (code != null && code != 0 && code != 20000000) {
               _addDebugLog('error', 'Stream Error', 'Code: $code, Message: ${data['message']}');
@@ -433,31 +521,65 @@ class TtsService {
         }
       }
 
-      print('【TTS】流处理完成，共接收 $chunkCount 个数据块，音频数据: ${audioChunks.length} bytes');
+      _addDebugLog('info', '流处理完成', '数据块:$chunkCount, 音频:${audioChunks.length}bytes, 时间戳:${timestampList.length}条');
+      
+      // 打印完整的时间戳数据（用于分析）
+      if (timestampList.isNotEmpty) {
+        final tsSample = timestampList.take(3).map((e) => jsonEncode(e)).join('\n');
+        _addDebugLog('info', '时间戳数据示例', '[1-${timestampList.length}]\n$tsSample\n字段keys: ${timestampList.first.keys.toList()}');
+      }
       
       if (audioChunks.isEmpty) {
         _addDebugLog('error', '合成失败', '未收到音频数据');
-        print('【TTS】错误: 未收到音频数据');
+        _addDebugLog('error', '合成失败', '未收到音频数据');
         return null;
       }
 
-      print('【TTS】保存音频文件...');
+      _addDebugLog('info', '保存音频文件', '');
       final dir = await getApplicationDocumentsDirectory();
-      final fileName = 'tts_${DateTime.now().millisecondsSinceEpoch}.mp3';
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'tts_$ts.mp3';
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(audioChunks);
-      _addDebugLog('info', '合成成功', '文件: ${file.path}, 大小: ${audioChunks.length} bytes');
+      
+      // 保存时间戳文件并转换为 TimestampItem 列表
+      String? timestampPath;
+      List<TimestampItem>? timestamps;
+      if (timestampList.isNotEmpty) {
+        final tsFileName = 'tts_$ts.json';
+        timestampPath = '${dir.path}/$tsFileName';
+        final tsFile = File(timestampPath);
+        await tsFile.writeAsString(jsonEncode(timestampList));
+        
+        // 转换为 TimestampItem 列表
+        timestamps = timestampList.map((item) => TimestampItem.fromJson(item)).toList();
+        _addDebugLog('info', '保存时间戳文件', '$timestampPath, ${timestamps.length}条');
+      }
+      
+      // 打印完整返回结果
+      _addDebugLog('info', '合成成功', '音频:${file.path}, 大小:${audioChunks.length}bytes, 时间戳:${timestampList.length}条, 时间戳文件:$timestampPath');
+      if (timestamps != null && timestamps.isNotEmpty) {
+        _addDebugLog('info', '时间戳范围', '首字:${timestamps.first.char}(${timestamps.first.startTime}ms)~尾字:${timestamps.last.char}(${timestamps.last.endTime}ms)');
+      }
+      _addDebugLog('info', '合成完成', '');
+      
+      _addDebugLog('info', '合成成功', '文件: ${file.path}, 大小: ${audioChunks.length} bytes, 时间戳: ${timestampList.length}');
       onProgress?.call(1.0);
-      return file;
+      
+      return _SynthesizeResult(
+        audioFile: file,
+        timestampPath: timestampPath,
+        timestamps: timestamps,
+      );
     } catch (e) {
       _addDebugLog('error', '合成异常', e.toString());
-      print('Synthesize error: $e');
+      _addDebugLog('error', '合成异常', e.toString());
       return null;
     }
   }
 
   /// Synthesize for Web platform using stream API
-  Future<File?> _synthesizeStreamWeb(
+  Future<_SynthesizeResult?> _synthesizeStreamWeb(
     String text, {
     required String voiceType,
     required AudioParams audioParams,
@@ -468,7 +590,7 @@ class TtsService {
     try {
       final List<int> audioChunks = [];
       
-      // 构建请求体
+      // 构建请求体 - 添加 with_timestamp 获取时间戳
       final reqParams = <String, dynamic>{
         'text': text,
         'speaker': voiceType,
@@ -477,6 +599,7 @@ class TtsService {
           'sample_rate': 24000,
           'speech_rate': audioParams.speechRate,
           'loudness_rate': audioParams.loudnessRate,
+          'with_timestamp': 1, // 开启时间戳
         },
       };
       
@@ -547,14 +670,29 @@ class TtsService {
       if (audioChunks.isEmpty) return null;
 
       final dir = await getApplicationDocumentsDirectory();
-      final fileName = 'tts_${DateTime.now().millisecondsSinceEpoch}.mp3';
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'tts_$ts.mp3';
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(audioChunks);
-      return file;
+      
+      // Web 平台暂时不支持时间戳，返回空
+      return _SynthesizeResult(
+        audioFile: file,
+        timestampPath: null,
+        timestamps: null,
+      );
     } catch (e) {
-      print('Stream synthesize error: $e');
+      _addDebugLog('error', 'Stream合成错误', e.toString());
       return null;
     }
+  }
+  
+  /// 获取时间戳数据文件路径（与音频文件对应）
+  String? _getTimestampPath(String audioPath) {
+    if (audioPath.endsWith('.mp3')) {
+      return audioPath.replaceAll('.mp3', '.json');
+    }
+    return null;
   }
 
   /// Cancel current download
@@ -971,7 +1109,7 @@ class TtsService {
           await file.delete();
         }
       } catch (e) {
-        print('Delete cache file error: $e');
+        _addDebugLog('error', '删除缓存文件错误', e.toString());
       }
     }
     await _db.clearAllVoiceCaches();

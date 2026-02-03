@@ -8,6 +8,9 @@ import 'package:path_provider/path_provider.dart';
 import '../models/poem.dart';
 import '../models/poem_group.dart';
 import '../models/tts_result.dart';
+
+// 导出 TimestampItem 供 UI 使用
+export '../models/tts_result.dart' show TimestampItem;
 import '../services/database_helper.dart';
 import '../services/settings_service.dart';
 import '../services/tts_service.dart';
@@ -80,6 +83,9 @@ class PoemController extends GetxController {
 
   /// 当前底部导航索引
   final RxInt currentTabIndex = 0.obs;
+  
+  /// 当前播放的时间戳数据（用于卡拉OK高亮）
+  final RxList<TimestampItem> currentTimestamps = <TimestampItem>[].obs;
 
   // ==================== 初始化 ====================
 
@@ -289,6 +295,16 @@ class PoemController extends GetxController {
       errorMessage.value = '排序分组失败: $e';
     }
   }
+
+  /// 更新分组
+  Future<void> updateGroup(PoemGroup group) async {
+    try {
+      await _db.updateGroup(group);
+      await loadGroups();
+    } catch (e) {
+      errorMessage.value = '更新分组失败: $e';
+    }
+  }
   
   /// 删除诗词
   Future<void> deletePoem(int poemId) async {
@@ -418,8 +434,8 @@ class PoemController extends GetxController {
         loudnessRate: settings.loudnessRate.value,
       );
 
-      // 构建朗读文本：标题 + 作者 + 内容
-      final poemText = '${poem.title}。${poem.dynasty != null ? '${poem.dynasty}·' : ''}${poem.author}。${poem.content}';
+      // 构建朗读文本：标题 + 作者 + 纯净内容（TTS 只读 cleanContent）
+      final poemText = '${poem.title}。${poem.dynasty != null ? '${poem.dynasty}·' : ''}${poem.author}。${poem.cleanContent}';
       
       final result = await _ttsService.synthesizeText(
         text: poemText,
@@ -435,6 +451,19 @@ class PoemController extends GetxController {
         playbackState.value = PlaybackState.error;
         errorMessage.value = result.errorMessage ?? '播放失败';
         return;
+      }
+
+      // 保存时间戳数据
+      if (result.timestamps != null && result.timestamps!.isNotEmpty) {
+        currentTimestamps.value = result.timestamps!;
+        print('【Controller】=== 加载时间戳到UI ===');
+        print('【Controller】时间戳数量: ${result.timestamps!.length} 条');
+        print('【Controller】第一条: char="${result.timestamps!.first.char}", time=${result.timestamps!.first.startTime}ms~${result.timestamps!.first.endTime}ms');
+        print('【Controller】最后一条: char="${result.timestamps!.last.char}", time=${result.timestamps!.last.startTime}ms~${result.timestamps!.last.endTime}ms');
+        print('【Controller】==============================');
+      } else {
+        currentTimestamps.clear();
+        print('【Controller】无时间戳数据， KaraOK 效果将不生效');
       }
 
       // 播放音频
@@ -530,6 +559,7 @@ class PoemController extends GetxController {
     await _audioPlayer!.stop();
     playbackState.value = PlaybackState.idle;
     position.value = Duration.zero;
+    currentTimestamps.clear(); // 清除时间戳
   }
 
   /// 跳转到指定位置

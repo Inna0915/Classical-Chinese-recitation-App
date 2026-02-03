@@ -2,7 +2,7 @@
 /// 
 /// 包含诗词的基本信息以及本地音频缓存路径
 class Poem {
-  /// 诗词唯一标识（使用诗词标题的 hash 或固定ID）
+  /// 诗词唯一标识
   final int id;
   
   /// 诗词标题
@@ -14,8 +14,14 @@ class Poem {
   /// 朝代（如：唐、宋、元等）
   final String? dynasty;
   
-  /// 诗词正文内容
+  /// 诗词正文内容（兼容旧字段）
   final String content;
+  
+  /// 纯净版原文（用于展示和TTS朗读）
+  final String cleanContent;
+  
+  /// 带释义的原文（用于展示释义版）
+  final String? annotatedContent;
   
   /// 本地音频文件缓存路径（null 表示未缓存）
   final String? localAudioPath;
@@ -35,6 +41,8 @@ class Poem {
     required this.author,
     this.dynasty,
     required this.content,
+    this.cleanContent = '',
+    this.annotatedContent,
     this.localAudioPath,
     this.createdAt,
     this.groupId,
@@ -43,12 +51,20 @@ class Poem {
 
   /// 从数据库 Map 转换为 Poem 对象
   factory Poem.fromMap(Map<String, dynamic> map) {
+    final content = map['content'] as String;
+    final clean = map['clean_content'] as String?;
+    final annotated = map['annotated_content'] as String?;
+    
     return Poem(
       id: map['id'] as int,
       title: map['title'] as String,
       author: map['author'] as String,
       dynasty: map['dynasty'] as String?,
-      content: map['content'] as String,
+      content: content,
+      // 兼容旧数据：如果没有 clean_content，使用 content
+      cleanContent: clean ?? content,
+      // 兼容旧数据：如果没有 annotated_content，显示 cleanContent
+      annotatedContent: annotated,
       localAudioPath: map['local_audio_path'] as String?,
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'] as String)
@@ -66,6 +82,8 @@ class Poem {
       'author': author,
       'dynasty': dynasty,
       'content': content,
+      'clean_content': cleanContent,
+      'annotated_content': annotatedContent,
       'local_audio_path': localAudioPath,
       'created_at': createdAt?.toIso8601String(),
       'group_id': groupId,
@@ -80,6 +98,8 @@ class Poem {
     String? author,
     String? dynasty,
     String? content,
+    String? cleanContent,
+    String? annotatedContent,
     String? localAudioPath,
     DateTime? createdAt,
     int? groupId,
@@ -91,6 +111,8 @@ class Poem {
       author: author ?? this.author,
       dynasty: dynasty ?? this.dynasty,
       content: content ?? this.content,
+      cleanContent: cleanContent ?? this.cleanContent,
+      annotatedContent: annotatedContent ?? this.annotatedContent,
       localAudioPath: localAudioPath ?? this.localAudioPath,
       createdAt: createdAt ?? this.createdAt,
       groupId: groupId ?? this.groupId,

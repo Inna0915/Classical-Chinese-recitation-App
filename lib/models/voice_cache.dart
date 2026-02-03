@@ -4,6 +4,7 @@ class VoiceCache {
   final int poemId;
   final String voiceType;
   final String filePath;
+  final String? timestampPath; // 时间戳文件路径
   final int fileSize;
   final DateTime createdAt;
 
@@ -12,6 +13,7 @@ class VoiceCache {
     required this.poemId,
     required this.voiceType,
     required this.filePath,
+    this.timestampPath,
     required this.fileSize,
     required this.createdAt,
   });
@@ -22,6 +24,7 @@ class VoiceCache {
       poemId: map['poem_id'] as int,
       voiceType: map['voice_type'] as String,
       filePath: map['file_path'] as String,
+      timestampPath: map['timestamp_path'] as String?,
       fileSize: map['file_size'] as int,
       createdAt: DateTime.parse(map['created_at'] as String),
     );
@@ -33,6 +36,7 @@ class VoiceCache {
       'poem_id': poemId,
       'voice_type': voiceType,
       'file_path': filePath,
+      'timestamp_path': timestampPath,
       'file_size': fileSize,
       'created_at': createdAt.toIso8601String(),
     };
@@ -43,6 +47,7 @@ class VoiceCache {
     int? poemId,
     String? voiceType,
     String? filePath,
+    String? timestampPath,
     int? fileSize,
     DateTime? createdAt,
   }) {
@@ -51,6 +56,7 @@ class VoiceCache {
       poemId: poemId ?? this.poemId,
       voiceType: voiceType ?? this.voiceType,
       filePath: filePath ?? this.filePath,
+      timestampPath: timestampPath ?? this.timestampPath,
       fileSize: fileSize ?? this.fileSize,
       createdAt: createdAt ?? this.createdAt,
     );
