@@ -52,7 +52,12 @@ class _GroupsPageState extends State<GroupsPage> {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(UIConstants.defaultPadding),
+          padding: const EdgeInsets.only(
+            left: UIConstants.defaultPadding,
+            right: UIConstants.defaultPadding,
+            top: UIConstants.defaultPadding,
+            bottom: 80, // 增加底部padding，防止被MiniPlayer遮挡
+          ),
           itemCount: controller.groups.length,
           itemBuilder: (context, index) {
             final group = controller.groups[index];

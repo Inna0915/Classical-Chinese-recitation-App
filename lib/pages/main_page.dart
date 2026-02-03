@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import '../constants/app_constants.dart';
 import '../controllers/poem_controller.dart';
 import '../services/update_service.dart';
+import '../widgets/mini_player_widget.dart';
 import 'poem_list_page.dart';
 import 'favorites_page.dart';
 import 'groups_page.dart';
@@ -58,47 +59,57 @@ class _MainPageState extends State<MainPage> {
               GroupsPage(),
             ],
           ),
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              color: const Color(UIConstants.cardColor),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, -5),
-                ),
-              ],
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(
-                      index: 0,
-                      icon: Icons.menu_book_outlined,
-                      activeIcon: Icons.menu_book,
-                      label: '书架',
+          bottomNavigationBar: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 迷你播放控制条（有播放任务时显示）
+              const MiniPlayerWidget(),
+              
+              // 底部导航栏
+              Container(
+                decoration: BoxDecoration(
+                  color: const Color(UIConstants.cardColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
                     ),
-                    _buildNavItem(
-                      index: 1,
-                      icon: Icons.favorite_outline,
-                      activeIcon: Icons.favorite,
-                      label: '收藏',
-                    ),
-                    _buildNavItem(
-                      index: 2,
-                      icon: Icons.folder_outlined,
-                      activeIcon: Icons.folder,
-                      label: '分组',
-                    ),
-                    // 设置按钮
-                    _buildSettingsButton(),
                   ],
                 ),
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildNavItem(
+                          index: 0,
+                          icon: Icons.menu_book_outlined,
+                          activeIcon: Icons.menu_book,
+                          label: '书架',
+                        ),
+                        _buildNavItem(
+                          index: 1,
+                          icon: Icons.favorite_outline,
+                          activeIcon: Icons.favorite,
+                          label: '收藏',
+                        ),
+                        _buildNavItem(
+                          index: 2,
+                          icon: Icons.folder_outlined,
+                          activeIcon: Icons.folder,
+                          label: '分组',
+                        ),
+                        // 设置按钮
+                        _buildSettingsButton(),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ));
   }

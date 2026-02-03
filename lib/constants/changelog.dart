@@ -1,9 +1,21 @@
 /// 应用更新记录
 class Changelog {
-  static const String currentVersion = 'v1.3.0';
+  static const String currentVersion = 'v1.4.0';
   static const String currentDate = '2025-02-04';
   
   static const List<VersionInfo> versions = [
+    VersionInfo(
+      version: 'v1.4.0',
+      date: '2025-02-04',
+      changes: [
+        '✨ 新增全局迷你播放控制条（MiniPlayer）',
+        '✨ MiniPlayer支持旋转意境图标动画',
+        '✨ MiniPlayer支持播放进度环显示',
+        '✨ 播放列表BottomSheet（当前播放管理）',
+        '✨ 全局播放控制，切换Tab保持播放状态',
+        '🎨 参考QQ音乐设计风格，古风元素适配',
+      ],
+    ),
     VersionInfo(
       version: 'v1.3.0',
       date: '2025-02-04',

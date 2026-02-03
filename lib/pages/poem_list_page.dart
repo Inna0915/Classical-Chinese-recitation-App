@@ -54,7 +54,12 @@ class _PoemListPageState extends State<PoemListPage> {
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 8,
+                  bottom: 80, // 增加底部padding，防止被MiniPlayer遮挡
+                ),
                 itemCount: controller.filteredPoems.length,
                 itemBuilder: (context, index) {
                   final poem = controller.filteredPoems[index];
