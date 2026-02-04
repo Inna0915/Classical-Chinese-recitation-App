@@ -5,7 +5,7 @@ import '../constants/ai_prompts.dart';
 import '../constants/app_constants.dart';
 import '../controllers/poem_controller.dart';
 import '../core/theme/app_theme.dart';
-import '../models/poem.dart';
+import '../models/poem_new.dart';
 import '../services/ai_service.dart';
 import '../services/database_helper.dart';
 import '../services/settings_service.dart';
@@ -76,16 +76,14 @@ class _AddPoemPageState extends State<AddPoemPage> {
         id: id,
         title: _titleController.text.trim(),
         author: _authorController.text.trim(),
-        dynasty: null, // 朝代信息不再单独输入，可包含在作者字段中
-        content: _contentController.text.trim(),
         cleanContent: cleanContent,
         annotatedContent: _annotatedContentController.text.trim().isNotEmpty
             ? _annotatedContentController.text.trim()
-            : null,
+            : cleanContent,
         createdAt: DateTime.now(),
       );
 
-      await DatabaseHelper.instance.insertPoem(poem);
+      await DatabaseHelper.instance.insertPoem(poem, tagNames: []);
       await PoemController.to.loadPoems();
       
       if (mounted) {

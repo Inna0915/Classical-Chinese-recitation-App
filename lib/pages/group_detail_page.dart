@@ -4,7 +4,7 @@ import '../constants/app_constants.dart';
 import '../controllers/player_controller.dart';
 import '../controllers/poem_controller.dart';
 import '../core/theme/app_theme.dart';
-import '../models/poem.dart';
+import '../models/poem_new.dart';
 import '../models/poem_group.dart';
 
 

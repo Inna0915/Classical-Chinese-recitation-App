@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import '../constants/app_constants.dart';
 import '../models/enums.dart';
-import '../models/poem.dart';
+import '../models/poem_new.dart';
 import '../models/tts_result.dart';
 import '../services/settings_service.dart';
 import '../services/tts_service.dart';
@@ -127,11 +127,11 @@ class PlayerController extends GetxController {
 
   // ==================== 播放列表操作 ====================
 
-  /// 播放分组/列表
+  /// 播放诗词列表
   /// 
   /// [poems] 要播放的诗词列表
   /// [initialIndex] 从第几首开始播放
-  Future<void> playGroup(List<Poem> poems, int initialIndex) async {
+  Future<void> playPoemList(List<Poem> poems, int initialIndex) async {
     debugPrint('[PlayerController] playGroup called, poems: ${poems.length}, index: $initialIndex');
     if (poems.isEmpty) {
       debugPrint('[PlayerController] poems is empty, returning');
@@ -307,13 +307,13 @@ class PlayerController extends GetxController {
 
       debugPrint('[PlayerController] calling TTS synthesizeText...');
       final result = await _ttsService.synthesizeText(
-        text: '${poem.title}。${poem.dynasty != null ? '${poem.dynasty}·' : ''}${poem.author}。${poem.cleanContent}',
+        text: '${poem.title}。${poem.author}。${poem.cleanContent}',
         voiceType: settings.voiceType.value,
         audioParams: AudioParams(
           speechRate: settings.speechRate.value,
           loudnessRate: settings.loudnessRate.value,
         ),
-        poemId: poem.id,
+        poemId: poem.id!,
         onProgress: (progress) {
           downloadProgress.value = progress;
         },

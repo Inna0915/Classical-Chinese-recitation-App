@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import '../constants/app_constants.dart';
 import '../controllers/poem_controller.dart';
 import '../core/theme/app_theme.dart';
-import '../models/poem.dart';
+import '../models/poem_new.dart';
 import '../models/poem_group.dart';
 import '../widgets/dialogs/app_dialog.dart';
 import 'poem_detail_page.dart';

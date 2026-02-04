@@ -5,7 +5,7 @@ import '../core/theme/app_theme.dart';
 import '../controllers/player_controller.dart';
 import '../controllers/poem_controller.dart';
 import '../models/enums.dart';
-import '../models/poem.dart';
+import '../models/poem_new.dart';
 import '../pages/poem_detail_page.dart';
 
 /// 迷你播放控制条 - 悬浮在底部导航栏上方
@@ -84,7 +84,7 @@ class MiniPlayerWidget extends StatelessWidget {
                         const SizedBox(height: 4),
                         // 作者信息
                         Text(
-                          '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
+                          poem.author,
                           style: TextStyle(
                             fontSize: 12,
                             color: context.textSecondaryColor,
@@ -475,7 +475,7 @@ class _PlaylistItem extends StatelessWidget {
         ),
       ),
       subtitle: Text(
-        '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
+        poem.author,
         style: TextStyle(
           fontSize: 12,
           color: context.textSecondaryColor,

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../core/theme/app_theme.dart';
 import '../models/poem_new.dart';
-import '../models/poem.dart' as old;
 import '../services/poem_service.dart';
 import '../controllers/poem_controller.dart';
 import 'poem_detail_page.dart';
@@ -34,9 +32,9 @@ class _PoemDetailPageNewState extends State<PoemDetailPageNew> {
     setState(() => _isLoading = false);
     
     if (_poem != null) {
-      // 同步到旧控制器以兼容原有详情页
-      final oldController = Get.find<PoemController>();
-      oldController.selectPoem(_poem!);
+      // 同步到控制器
+      final controller = Get.find<PoemController>();
+      controller.selectPoem(_poem!);
     }
   }
 
@@ -57,37 +55,5 @@ class _PoemDetailPageNewState extends State<PoemDetailPageNew> {
 
     // 跳转到原有详情页
     return const PoemDetailPage();
-  }
-}
-
-/// 扩展 PoemController 以支持新模型
-extension PoemControllerExtension on PoemController {
-  void selectPoem(Poem poem) {
-    // 转换新模型到旧模型格式
-    currentPoem.value = PoemAdapter.toOldPoem(poem);
-  }
-}
-
-/// 模型适配器 - 新模型转旧模型
-class PoemAdapter {
-  static old.Poem toOldPoem(Poem poem) {
-    // 解析 author 字段 "李白 [唐]"
-    final authorMatch = RegExp(r'(.+)\s*\[(.+?)\]').firstMatch(poem.author);
-    final authorName = authorMatch?.group(1)?.trim() ?? poem.author;
-    final dynasty = authorMatch?.group(2)?.trim();
-
-    // 创建兼容旧控制器的 poem 对象
-    return old.Poem(
-      id: poem.id!,
-      title: poem.title,
-      author: authorName,
-      dynasty: dynasty,
-      content: poem.cleanContent,
-      cleanContent: poem.cleanContent,
-      annotatedContent: poem.annotatedContent,
-      localAudioPath: poem.localAudioPath,
-      createdAt: poem.createdAt,
-      isFavorite: poem.isFavorite,
-    );
   }
 }

@@ -7,7 +7,7 @@ import 'package:get/get.dart';
 import 'package:path_provider/path_provider.dart';
 import '../constants/app_constants.dart';
 import '../constants/tts_voices.dart';
-import '../models/poem.dart';
+// import '../models/poem.dart';  // 语音缓存功能暂时禁用
 import '../models/voice_cache.dart';
 import '../models/tts_result.dart';
 import '../services/database_helper.dart';
@@ -249,44 +249,9 @@ class TtsService {
     final params = audioParams ?? const AudioParams();
     _addDebugLog('info', '使用音色', voice);
     
-    // 按音色检查缓存
-    _addDebugLog('info', '检查缓存', '查询音色缓存状态');
-    final cached = await _db.getVoiceCache(poemId, voice);
-    _addDebugLog('info', '缓存查询完成', cached?.toString() ?? '无缓存');
-    if (cached != null && await File(cached.filePath).exists()) {
-      _addDebugLog('info', '使用缓存文件', cached.filePath);
-      
-      // 加载时间戳数据
-      List<TimestampItem>? timestamps;
-      if (cached.timestampPath != null) {
-        final tsFile = File(cached.timestampPath!);
-        if (await tsFile.exists()) {
-          try {
-            final tsContent = await tsFile.readAsString();
-            final tsList = jsonDecode(tsContent) as List<dynamic>;
-            timestamps = tsList.map((item) => TimestampItem.fromJson(item as Map<String, dynamic>)).toList();
-            print('【TTS】=== 从缓存加载时间戳 ===');
-            print('【TTS】时间戳数量: ${timestamps.length} 条');
-            if (timestamps.isNotEmpty) {
-              print('【TTS】第一条: char="${timestamps.first.char}", start=${timestamps.first.startTime}ms, end=${timestamps.first.endTime}ms');
-              print('【TTS】最后一条: char="${timestamps.last.char}", start=${timestamps.last.startTime}ms, end=${timestamps.last.endTime}ms');
-            }
-            print('【TTS】===================');
-          } catch (e) {
-            _addDebugLog('error', '加载时间戳失败', e.toString());
-          }
-        }
-      }
-      
-      onProgress?.call(1.0);
-      return TtsResult.success(
-        audioPath: cached.filePath,
-        timestampPath: cached.timestampPath,
-        timestamps: timestamps,
-        isFromCache: true,
-      );
-    }
-    _addDebugLog('info', '无缓存', '开始TTS合成');
+    // 语音缓存功能暂时禁用 - 直接走网络请求
+    // TODO: 恢复缓存功能
+    _addDebugLog('info', '缓存已禁用', '直接进行TTS合成');
 
     // Synthesize audio
     _cancelToken = CancelToken();
@@ -306,15 +271,16 @@ class TtsService {
         return TtsResult.failure('合成失败');
       }
 
-      // Save to cache (by voice)
-      await _db.saveVoiceCache(VoiceCache(
-        poemId: poemId,
-        voiceType: voice,
-        filePath: result.audioFile.path,
-        timestampPath: result.timestampPath,
-        fileSize: await result.audioFile.length(),
-        createdAt: DateTime.now(),
-      ));
+      // 语音缓存功能暂时禁用
+      // TODO: 恢复缓存功能
+      // await _db.saveVoiceCache(VoiceCache(
+      //   poemId: poemId,
+      //   voiceType: voice,
+      //   filePath: result.audioFile.path,
+      //   timestampPath: result.timestampPath,
+      //   fileSize: await result.audioFile.length(),
+      //   createdAt: DateTime.now(),
+      // ));
 
       return TtsResult.success(
         audioPath: result.audioFile.path,
@@ -333,17 +299,10 @@ class TtsService {
     }
   }
 
-  /// 检查指定诗词和音色是否已缓存
+  /// 检查指定诗词和音色是否已缓存（语音缓存功能暂时禁用）
   Future<bool> isVoiceCached(int poemId, String voiceType) async {
-    try {
-      final cached = await _db.getVoiceCache(poemId, voiceType);
-      if (cached != null && await File(cached.filePath).exists()) {
-        return true;
-      }
-      return false;
-    } catch (e) {
-      return false;
-    }
+    // 语音缓存功能暂时禁用
+    return false;
   }
 
   /// Synthesize text to audio file
@@ -702,47 +661,46 @@ class TtsService {
     }
   }
 
-  /// Check if poem has cached audio for specific voice
+  /// Check if poem has cached audio for specific voice（语音缓存功能暂时禁用）
   Future<VoiceCache?> getCachedAudio(int poemId, String voiceType) async {
-    return await _db.getVoiceCache(poemId, voiceType);
+    // 语音缓存功能暂时禁用
+    return null;
   }
 
-  /// Get all cached voices for a poem
+  /// Get all cached voices for a poem（语音缓存功能暂时禁用）
   Future<List<VoiceCache>> getCachedVoices(int poemId) async {
-    return await _db.getVoiceCachesForPoem(poemId);
+    // 语音缓存功能暂时禁用
+    return [];
   }
 
-  /// Cache audio file for poem and voice
+  /// Cache audio file for poem and voice（语音缓存功能暂时禁用）
   Future<void> cacheAudio(int poemId, String voiceType, File audioFile) async {
-    await _db.saveVoiceCache(VoiceCache(
-      poemId: poemId,
-      voiceType: voiceType,
-      filePath: audioFile.path,
-      fileSize: await audioFile.length(),
-      createdAt: DateTime.now(),
-    ));
+    // 语音缓存功能暂时禁用
+    // TODO: 恢复缓存功能
   }
 
-  /// Clear audio cache for a specific poem (all voices)
+  /// Clear audio cache for a specific poem (all voices)（语音缓存功能暂时禁用）
   Future<void> clearAudioCache(int poemId) async {
-    await _db.deleteAllVoiceCachesForPoem(poemId);
-    await _db.updatePoemAudioPath(poemId, null);
+    // 语音缓存功能暂时禁用
+    // TODO: 恢复缓存功能
   }
 
-  /// Clear voice cache for a poem
+  /// Clear voice cache for a poem（语音缓存功能暂时禁用）
   Future<void> clearCache(int poemId, String voiceType) async {
-    await _db.deleteVoiceCache(poemId, voiceType);
+    // 语音缓存功能暂时禁用
+    // TODO: 恢复缓存功能
   }
 
-  /// Clear all voice caches for a poem
+  /// Clear all voice caches for a poem（语音缓存功能暂时禁用）
   Future<void> clearAllCaches(int poemId) async {
-    await _db.deleteAllVoiceCachesForPoem(poemId);
+    // 语音缓存功能暂时禁用
+    // TODO: 恢复缓存功能
   }
 
-  /// Get total cache size in MB
+  /// Get total cache size in MB（语音缓存功能暂时禁用）
   Future<double> getCacheSize() async {
-    final size = await _db.getVoiceCacheSize();
-    return size / (1024 * 1024); // Convert to MB
+    // 语音缓存功能暂时禁用，返回 0
+    return 0.0;
   }
 
   /// 流式播放音频 - 完整的 NDJSON 解析实现
@@ -1099,20 +1057,10 @@ class TtsService {
     }
   }
 
-  /// Clear all audio cache
+  /// Clear all audio cache（语音缓存功能暂时禁用）
   Future<void> clearAllAudioCache() async {
-    final caches = await _db.getAllVoiceCaches();
-    for (final cache in caches) {
-      try {
-        final file = File(cache.filePath);
-        if (await file.exists()) {
-          await file.delete();
-        }
-      } catch (e) {
-        _addDebugLog('error', '删除缓存文件错误', e.toString());
-      }
-    }
-    await _db.clearAllVoiceCaches();
+    // 语音缓存功能暂时禁用
+    // TODO: 恢复缓存功能
   }
 
   /// Dispose

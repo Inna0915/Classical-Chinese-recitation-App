@@ -52,14 +52,14 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
           Obx(() {
             final poem = controller.currentPoem.value;
             if (poem == null) return const SizedBox.shrink();
-            final isFav = controller.isFavorite(poem.id);
+            final isFav = controller.isFavorite(poem.id!);
             return IconButton(
               icon: Icon(
                 isFav ? Icons.favorite : Icons.favorite_outline,
                 color: isFav ? context.primaryColor : context.textSecondaryColor,
                 size: 22,
               ),
-              onPressed: () => controller.toggleFavorite(poem.id),
+              onPressed: () => controller.toggleFavorite(poem.id!),
             );
           }),
         ],
@@ -359,7 +359,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                   onPressed: () {
                     // 清空播放列表，只播放当前诗词
                     if (poem != null) {
-                      playerController.playGroup([poem], 0);
+                      playerController.playPoemList([poem], 0);
                     }
                   },
                   icon: const Icon(Icons.play_arrow, size: 18),
@@ -614,8 +614,8 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                 child: ListView(
                   controller: scrollController,
                   children: [
-                    _buildVoiceSection(context, 'Doubao 1.0', TtsVoice1.voices, poem.id),
-                    _buildVoiceSection(context, 'Doubao 2.0', TtsVoice2.voices, poem.id),
+                    _buildVoiceSection(context, 'Doubao 1.0', TtsVoice1.voices, poem.id!),
+                    _buildVoiceSection(context, 'Doubao 2.0', TtsVoice2.voices, poem.id!),
                   ],
                 ),
               ),
