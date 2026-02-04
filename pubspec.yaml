@@ -54,6 +54,7 @@ flutter:
     - assets/logos/kimi.png        # Moonshot Kimi
     - assets/logos/deepseek.png    # DeepSeek
     - assets/logos/openai.png      # OpenAI
+    - assets/data/builtin_poems.json  # 内置诗词数据
     
   fonts:
     - family: NotoSerifSC

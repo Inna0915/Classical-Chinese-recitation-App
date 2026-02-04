@@ -7,12 +7,12 @@ import '../controllers/player_controller.dart';
 import '../core/theme/app_theme.dart';
 import '../services/update_service.dart';
 import '../widgets/mini_player_widget.dart';
-import 'poem_list_page.dart';
-import 'favorites_page.dart';
-import 'groups_page.dart';
+import 'bookshelf_page.dart';
+import 'collections_page.dart';
+import 'favorites_page_new.dart';
 import 'settings_page.dart';
 
-/// 主页面 - 带底部导航
+/// 主页面 - 带底部导航 (v2.0 新架构)
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
 
@@ -49,9 +49,9 @@ class _MainPageState extends State<MainPage> {
           body: IndexedStack(
             index: controller.currentTabIndex.value,
             children: const [
-              PoemListPage(),
-              FavoritesPage(),
-              GroupsPage(),
+              BookshelfPage(),      // 新书架页（标签+搜索）
+              FavoritesPageNew(),   // 新收藏页
+              CollectionsPage(),    // 小集页（原分组页）
             ],
           ),
           bottomNavigationBar: Column(
@@ -66,7 +66,7 @@ class _MainPageState extends State<MainPage> {
                   color: context.cardColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: Colors.black.withAlpha(13),
                       blurRadius: 10,
                       offset: const Offset(0, -5),
                     ),
@@ -93,9 +93,9 @@ class _MainPageState extends State<MainPage> {
                         ),
                         _buildNavItem(
                           index: 2,
-                          icon: Icons.folder_outlined,
-                          activeIcon: Icons.folder,
-                          label: '分组',
+                          icon: Icons.folder_special_outlined,
+                          activeIcon: Icons.folder_special,
+                          label: '小集',
                         ),
                         // 设置按钮
                         _buildSettingsButton(context),
@@ -122,10 +122,10 @@ class _MainPageState extends State<MainPage> {
       return GestureDetector(
         onTap: () => controller.currentTabIndex.value = index,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           decoration: BoxDecoration(
             color: isActive
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                ? context.primaryColor.withAlpha(26)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
@@ -135,7 +135,7 @@ class _MainPageState extends State<MainPage> {
               Icon(
                 isActive ? activeIcon : icon,
                 color: isActive
-                    ? Theme.of(context).colorScheme.primary
+                    ? context.primaryColor
                     : context.textSecondaryColor,
                 size: 24,
               ),
@@ -144,7 +144,7 @@ class _MainPageState extends State<MainPage> {
                 label,
                 style: TextStyle(
                   color: isActive
-                      ? Theme.of(context).colorScheme.primary
+                      ? context.primaryColor
                       : context.textSecondaryColor,
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
@@ -162,7 +162,7 @@ class _MainPageState extends State<MainPage> {
     return GestureDetector(
       onTap: () => Get.to(() => const SettingsPage()),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(12),

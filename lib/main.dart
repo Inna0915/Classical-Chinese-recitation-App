@@ -7,6 +7,7 @@ import 'pages/main_page.dart';
 import 'services/settings_service.dart';
 import 'services/tts_service.dart';
 import 'services/update_service.dart';
+import 'services/poem_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +18,10 @@ void main() async {
   // 同步音色设置到 TtsService
   TtsService().setVoiceType(settingsService.voiceType.value);
   
+  // 初始化新的 PoemService (标签+歌单架构)
+  Get.put(PoemService());
+  
+  // 旧控制器保持兼容（逐步迁移）
   Get.put(PoemController());
   Get.put(PlayerController());
   Get.put(UpdateService());
