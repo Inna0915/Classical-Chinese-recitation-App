@@ -24,7 +24,6 @@ class _AddPoemPageState extends State<AddPoemPage> {
   final _titleController = TextEditingController();
   final _authorController = TextEditingController();
   final _contentController = TextEditingController();
-  final _dynastyController = TextEditingController(text: '唐');
   final _cleanContentController = TextEditingController();
   final _annotatedContentController = TextEditingController();
   final _aiInputController = TextEditingController();
@@ -35,7 +34,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
   String? _errorMessage;
   String? _aiRawResponse; // AI 原始返回内容
 
-  final List<String> _dynasties = ['唐', '宋', '元', '明', '清', '汉', '南北朝', '其他'];
+
   
   final AIService _aiService = AIService();
 
@@ -44,70 +43,16 @@ class _AddPoemPageState extends State<AddPoemPage> {
     _titleController.dispose();
     _authorController.dispose();
     _contentController.dispose();
-    _dynastyController.dispose();
     _cleanContentController.dispose();
     _annotatedContentController.dispose();
     _aiInputController.dispose();
     super.dispose();
   }
 
-  /// 解析作者和朝代
+  /// 解析作者信息（朝代信息包含在作者字段中）
   void _parseAuthorAndDynasty(String authorStr) {
-    final str = authorStr.trim();
-    
-    // 匹配 [朝代] 作者 格式
-    final bracketMatch = RegExp(r'\[(.+?)\]\s*(.+)').firstMatch(str);
-    if (bracketMatch != null) {
-      _dynastyController.text = bracketMatch.group(1)!.trim();
-      _authorController.text = bracketMatch.group(2)!.trim();
-      return;
-    }
-    
-    // 匹配 朝代 · 作者 格式（支持中文点、英文句点）
-    final dotMatch = RegExp(r'(.+?)\s*[·•.]\s*(.+)').firstMatch(str);
-    if (dotMatch != null) {
-      var dynasty = dotMatch.group(1)!.trim();
-      if (dynasty.endsWith('代')) {
-        dynasty = dynasty.substring(0, dynasty.length - 1);
-      }
-      _dynastyController.text = dynasty;
-      _authorController.text = dotMatch.group(2)!.trim();
-      return;
-    }
-    
-    // 匹配 作者，朝代 或 作者,朝代 格式
-    final commaMatch = RegExp(r'(.+?)\s*[,，]\s*(.+)').firstMatch(str);
-    if (commaMatch != null) {
-      var part1 = commaMatch.group(1)!.trim();
-      var part2 = commaMatch.group(2)!.trim();
-      
-      final dynastyKeywords = ['唐', '宋', '元', '明', '清', '汉', '晋', '南北朝', '隋', '魏', '三国'];
-      bool part1IsDynasty = dynastyKeywords.any((k) => part1.contains(k));
-      bool part2IsDynasty = dynastyKeywords.any((k) => part2.contains(k));
-      
-      if (part1IsDynasty && !part2IsDynasty) {
-        if (part1.endsWith('代')) part1 = part1.substring(0, part1.length - 1);
-        _dynastyController.text = part1;
-        _authorController.text = part2;
-      } else if (part2IsDynasty && !part1IsDynasty) {
-        if (part2.endsWith('代')) part2 = part2.substring(0, part2.length - 1);
-        _dynastyController.text = part2;
-        _authorController.text = part1;
-      } else {
-        if (part1.length <= 3) {
-          if (part1.endsWith('代')) part1 = part1.substring(0, part1.length - 1);
-          _dynastyController.text = part1;
-          _authorController.text = part2;
-        } else {
-          if (part2.endsWith('代')) part2 = part2.substring(0, part2.length - 1);
-          _dynastyController.text = part2;
-          _authorController.text = part1;
-        }
-      }
-      return;
-    }
-    
-    _authorController.text = str;
+    // 直接将完整的作者信息填入作者字段，不再单独解析朝代
+    _authorController.text = authorStr.trim();
   }
 
   /// 保存作品
@@ -131,7 +76,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
         id: id,
         title: _titleController.text.trim(),
         author: _authorController.text.trim(),
-        dynasty: _dynastyController.text.trim(),
+        dynasty: null, // 朝代信息不再单独输入，可包含在作者字段中
         content: _contentController.text.trim(),
         cleanContent: cleanContent,
         annotatedContent: _annotatedContentController.text.trim().isNotEmpty
@@ -919,15 +864,11 @@ class _AddPoemPageState extends State<AddPoemPage> {
           
           const SizedBox(height: 16),
           
-          _buildDynastySelector(context),
-          
-          const SizedBox(height: 16),
-          
           _buildTextField(
             context: context,
             controller: _authorController,
             label: '作者',
-            hint: '如：李白',
+            hint: '如：李白、杜甫（朝代信息选填）',
             icon: Icons.person_outline,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
@@ -1056,69 +997,6 @@ class _AddPoemPageState extends State<AddPoemPage> {
               ),
             ),
             filled: true,
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// 朝代选择器
-  Widget _buildDynastySelector(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '朝代',
-          style: TextStyle(
-            color: context.textPrimaryColor,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 32,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _dynasties.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final dynasty = _dynasties[index];
-              final isSelected = _dynastyController.text == dynasty;
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    _dynastyController.text = dynasty;
-                  });
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? context.primaryColor
-                        : context.cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: isSelected
-                          ? context.primaryColor
-                          : context.dividerColor,
-                    ),
-                  ),
-                  child: Text(
-                    dynasty,
-                    style: TextStyle(
-                      color: isSelected
-                          ? Colors.white
-                          : context.textPrimaryColor,
-                      fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              );
-            },
           ),
         ),
       ],

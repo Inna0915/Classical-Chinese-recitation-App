@@ -44,7 +44,7 @@ class CustomSearchBar extends StatelessWidget {
       height: 48,
       margin: margin,
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F2),
+        color: context.isAppDarkMode ? const Color(0xFF2C2C2C) : const Color(0xFFF2F2F2),
         borderRadius: BorderRadius.circular(24),
       ),
       child: TextField(
@@ -68,31 +68,27 @@ class CustomSearchBar extends StatelessWidget {
             size: 22,
           ),
           suffixIcon: controller != null && controller!.text.isNotEmpty
-              ? Obx(() {
-                  // 使用 Obx 监听文本变化
-                  final hasText = controller!.text.isNotEmpty;
-                  if (!hasText) return const SizedBox.shrink();
-                  return GestureDetector(
-                    onTap: () {
-                      controller!.clear();
-                      onChanged?.call('');
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: context.textSecondaryColor.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.close,
-                        color: context.textSecondaryColor,
-                        size: 14,
-                      ),
+              ? GestureDetector(
+                  onTap: () {
+                    controller!.clear();
+                    onChanged?.call('');
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: context.textSecondaryColor.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
                     ),
-                  );
-                })
+                    child: Icon(
+                      Icons.close,
+                      color: context.textSecondaryColor,
+                      size: 14,
+                    ),
+                  ),
+                )
               : null,
           border: InputBorder.none,
+          filled: false,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 14,

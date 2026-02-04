@@ -39,7 +39,7 @@ class UpdateService extends GetxService {
 
   // 下载加速前缀（可配置）
   static const String _mirrorPrefix = 'https://mirror.ghproxy.com/';
-  bool _useMirror = true;
+  bool _useMirror = false;
 
   // 状态
   final RxBool isChecking = false.obs;

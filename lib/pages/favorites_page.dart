@@ -54,6 +54,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
               return ListView.builder(
                 controller: _scrollController,
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.only(
                   left: 16,
                   right: 16,
@@ -66,10 +67,16 @@ class _FavoritesPageState extends State<FavoritesPage> {
                   return FavoritePoemItem(
                     poem: poem,
                     onTap: () {
+                      // 收起键盘
+                      FocusScope.of(context).unfocus();
                       controller.selectPoem(poem);
                       Get.to(() => const PoemDetailPage());
                     },
-                    onRemove: () => _showRemoveConfirm(context, poem),
+                    onRemove: () {
+                      // 收起键盘
+                      FocusScope.of(context).unfocus();
+                      _showRemoveConfirm(context, poem);
+                    },
                   );
                 },
               );
@@ -155,7 +162,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
       message: '确定要取消收藏《${poem.title}》吗？',
       confirmText: '取消收藏',
       cancelText: '保留',
-      confirmColor: Colors.red,
+      confirmColor: context.primaryColor,
     ).then((confirmed) {
       if (confirmed == true) {
         controller.toggleFavorite(poem.id!);
@@ -249,9 +256,9 @@ class FavoritePoemItem extends StatelessWidget {
                 ),
                 // 收藏按钮（实心红心）
                 IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.favorite,
-                    color: Colors.red,
+                    color: context.primaryColor,
                     size: 20,
                   ),
                   onPressed: onRemove,

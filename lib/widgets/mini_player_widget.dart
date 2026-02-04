@@ -628,7 +628,7 @@ class _FavoriteButton extends StatelessWidget {
       return IconButton(
         icon: Icon(
           isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: isFavorite ? Colors.red : context.textSecondaryColor,
+          color: isFavorite ? context.primaryColor : context.textSecondaryColor,
           size: 22,
         ),
         onPressed: () => controller.toggleFavorite(poem.id!),

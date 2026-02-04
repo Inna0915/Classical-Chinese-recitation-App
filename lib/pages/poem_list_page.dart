@@ -53,6 +53,7 @@ class _PoemListPageState extends State<PoemListPage> {
 
               return ListView.builder(
                 controller: _scrollController,
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.only(
                   left: 16,
                   right: 16,
@@ -65,10 +66,16 @@ class _PoemListPageState extends State<PoemListPage> {
                   return PoemListItem(
                     poem: poem,
                     onTap: () {
+                      // 收起键盘
+                      FocusScope.of(context).unfocus();
                       controller.selectPoem(poem);
                       Get.to(() => const PoemDetailPage());
                     },
-                    onMorePressed: () => _showPoemOptions(context, poem),
+                    onMorePressed: () {
+                      // 收起键盘
+                      FocusScope.of(context).unfocus();
+                      _showPoemOptions(context, poem);
+                    },
                   );
                 },
               );
@@ -482,7 +489,7 @@ class PoemListItem extends StatelessWidget {
                 return IconButton(
                   icon: Icon(
                     isFavorite ? Icons.favorite : Icons.favorite_border,
-                    color: isFavorite ? Colors.red : context.textSecondaryColor,
+                    color: isFavorite ? context.primaryColor : context.textSecondaryColor,
                     size: 20,
                   ),
                   onPressed: () => controller.toggleFavorite(poem.id!),

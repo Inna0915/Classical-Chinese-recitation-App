@@ -30,6 +30,18 @@ class TraditionalChineseColors {
   /// 玄青 (Dark Black)
   static const Color darkBlack = Color(0xFF3D3B4F);
   
+  /// 靛蓝 (Deep Indigo)
+  static const Color deepIndigo = Color(0xFF0F4C81);
+  
+  /// 橘橙 (Persimmon)
+  static const Color persimmon = Color(0xFFDD5B38);
+  
+  /// 翠绿 (Emerald)
+  static const Color emerald = Color(0xFF50A898);
+  
+  /// 紫罗兰 (Violet)
+  static const Color violet = Color(0xFF7B68D4);
+  
   /// 获取所有主题色列表
   static const List<Color> allColors = [
     cinnabar,
@@ -38,6 +50,10 @@ class TraditionalChineseColors {
     gardenia,
     twilightPurple,
     darkBlack,
+    deepIndigo,
+    persimmon,
+    emerald,
+    violet,
   ];
   
   /// 获取颜色名称
@@ -48,6 +64,10 @@ class TraditionalChineseColors {
     if (color == gardenia) return '栀子';
     if (color == twilightPurple) return '暮山紫';
     if (color == darkBlack) return '玄青';
+    if (color == deepIndigo) return '靛蓝';
+    if (color == persimmon) return '橘橙';
+    if (color == emerald) return '翠绿';
+    if (color == violet) return '紫罗兰';
     return '自定义';
   }
 }
@@ -80,7 +100,7 @@ extension AppThemeExtension on BuildContext {
   /// 错误色
   Color get errorColor => theme.colorScheme.error;
   
-  /// 是否为深色模式（注意：GetX 也提供了 isDarkMode，使用时注意命名空间）
+  /// 是否为深色模式（GetX已提供isDarkMode，使用isAppDarkMode避免冲突）
   bool get isAppDarkMode => theme.brightness == Brightness.dark;
 }
 
