@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../constants/app_constants.dart';
 import '../../constants/tts_voices.dart';
+import '../../core/theme/app_theme.dart';
 import '../../models/tts_result.dart';
 import '../../services/settings_service.dart';
 import '../../services/tts_service.dart';
+import '../../widgets/dialogs/app_dialog.dart';
 import '../../widgets/settings/index.dart';
 
 /// TTS 配置页面 - 火山引擎语音合成详细配置
@@ -51,9 +52,7 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
         centerTitle: true,
         title: const Text(
@@ -66,10 +65,10 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
         actions: [
           TextButton(
             onPressed: _saveSettings,
-            child: const Text(
+            child: Text(
               '保存',
               style: TextStyle(
-                color: Color(UIConstants.accentColor),
+                color: context.primaryColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -93,27 +92,48 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
             const SizedBox(height: 24),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: ElevatedButton.icon(
-                onPressed: _isTesting ? null : _testTts,
-                icon: _isTesting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _isTesting ? null : _testTts,
+                      icon: _isTesting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.play_arrow),
+                      label: Text(_isTesting ? '测试中...' : '测试语音合成'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: context.primaryColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                      )
-                    : const Icon(Icons.play_arrow),
-                label: Text(_isTesting ? '测试中...' : '测试语音合成'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(UIConstants.accentColor),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  ElevatedButton.icon(
+                    onPressed: _showDebugLogs,
+                    icon: const Icon(Icons.bug_report),
+                    label: const Text('日志'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: context.cardColor,
+                      foregroundColor: context.primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(color: context.primaryColor),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             
@@ -141,50 +161,53 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
       title: '火山引擎鉴权信息',
       children: [
         // AppID
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: TextField(
+        SettingsTile(
+          title: 'App ID',
+          subtitleWidget: TextField(
             controller: _appIdController,
+            style: TextStyle(
+              fontSize: 14,
+              color: context.textPrimaryColor,
+            ),
             decoration: InputDecoration(
-              labelText: 'App ID',
-              labelStyle: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
               hintText: '请输入火山引擎 App ID',
               hintStyle: TextStyle(
-                color: Colors.grey[400],
+                color: context.textSecondaryColor.withValues(alpha: 0.5),
                 fontSize: 13,
               ),
               border: InputBorder.none,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 4),
             ),
           ),
+          trailing: SettingsTileTrailing.none,
         ),
         
-        const Divider(height: 1, indent: 16, endIndent: 16),
+        Divider(height: 1, indent: 16, endIndent: 16, color: context.dividerColor),
         
         // Access Token
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: TextField(
+        SettingsTile(
+          title: 'Access Token',
+          subtitleWidget: TextField(
             controller: _tokenController,
             obscureText: _obscureToken,
+            style: TextStyle(
+              fontSize: 14,
+              color: context.textPrimaryColor,
+            ),
             decoration: InputDecoration(
-              labelText: 'Access Token',
-              labelStyle: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
               hintText: '请输入 Access Token',
               hintStyle: TextStyle(
-                color: Colors.grey[400],
+                color: context.textSecondaryColor.withValues(alpha: 0.5),
                 fontSize: 13,
               ),
               border: InputBorder.none,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 4),
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscureToken ? Icons.visibility_off : Icons.visibility,
-                  color: Colors.grey[400],
+                  color: context.textSecondaryColor.withValues(alpha: 0.6),
                   size: 20,
                 ),
                 onPressed: () {
@@ -195,29 +218,32 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
               ),
             ),
           ),
+          trailing: SettingsTileTrailing.none,
         ),
         
-        const Divider(height: 1, indent: 16, endIndent: 16),
+        Divider(height: 1, indent: 16, endIndent: 16, color: context.dividerColor),
         
         // Cluster
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: TextField(
+        SettingsTile(
+          title: 'Cluster',
+          subtitleWidget: TextField(
             controller: _clusterController,
+            style: TextStyle(
+              fontSize: 14,
+              color: context.textPrimaryColor,
+            ),
             decoration: InputDecoration(
-              labelText: 'Cluster',
-              labelStyle: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
               hintText: 'volcano_tts',
               hintStyle: TextStyle(
-                color: Colors.grey[400],
+                color: context.textSecondaryColor.withValues(alpha: 0.5),
                 fontSize: 13,
               ),
               border: InputBorder.none,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 4),
             ),
           ),
+          trailing: SettingsTileTrailing.none,
         ),
       ],
     );
@@ -259,15 +285,15 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
                     '语速',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[800],
+                      color: context.textPrimaryColor,
                     ),
                   ),
                   Text(
                     '${(settingsService.speechRate.value / 50 + 1).toStringAsFixed(1)}x',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(UIConstants.accentColor),
+                      color: context.primaryColor,
                     ),
                   ),
                 ],
@@ -279,7 +305,7 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
                 max: 100,
                 divisions: 30,
                 label: settingsService.speechRate.value.toString(),
-                activeColor: const Color(UIConstants.accentColor),
+                activeColor: context.primaryColor,
                 onChanged: (value) {
                   settingsService.saveSpeechRate(value.round());
                 },
@@ -287,16 +313,16 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('慢', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                  Text('标准', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                  Text('快', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                  Text('慢', style: TextStyle(fontSize: 12, color: context.textSecondaryColor)),
+                  Text('标准', style: TextStyle(fontSize: 12, color: context.textSecondaryColor)),
+                  Text('快', style: TextStyle(fontSize: 12, color: context.textSecondaryColor)),
                 ],
               ),
             ],
           ),
         ),
         
-        const Divider(height: 1, indent: 16, endIndent: 16),
+        Divider(height: 1, indent: 16, endIndent: 16, color: context.dividerColor),
         
         // 音量
         Padding(
@@ -311,17 +337,17 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
                     '音量增强',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[800],
+                      color: context.textPrimaryColor,
                     ),
                   ),
                   Text(
                     settingsService.loudnessRate.value > 0 
                         ? '+${settingsService.loudnessRate.value}' 
                         : '${settingsService.loudnessRate.value}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(UIConstants.accentColor),
+                      color: context.primaryColor,
                     ),
                   ),
                 ],
@@ -333,7 +359,7 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
                 max: 100,
                 divisions: 30,
                 label: settingsService.loudnessRate.value.toString(),
-                activeColor: const Color(UIConstants.accentColor),
+                activeColor: context.primaryColor,
                 onChanged: (value) {
                   settingsService.saveLoudnessRate(value.round());
                 },
@@ -341,9 +367,9 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('轻', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                  Text('标准', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-                  Text('响', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                  Text('轻', style: TextStyle(fontSize: 12, color: context.textSecondaryColor)),
+                  Text('标准', style: TextStyle(fontSize: 12, color: context.textSecondaryColor)),
+                  Text('响', style: TextStyle(fontSize: 12, color: context.textSecondaryColor)),
                 ],
               ),
             ],
@@ -356,14 +382,14 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
   /// 显示音色选择器
   void _showVoiceSelector() {
     // 分类音色
-    final voice2List = TtsVoice2.voices;
-    final voice1List = TtsVoice1.voices;
+    const voice2List = TtsVoice2.voices;
+    const voice1List = TtsVoice1.voices;
     
     Get.bottomSheet(
       Container(
-        decoration: const BoxDecoration(
-          color: Color(UIConstants.cardColor),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(UIConstants.defaultRadius)),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: SafeArea(
           child: Column(
@@ -375,24 +401,25 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
                 height: 4,
                 margin: const EdgeInsets.only(top: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: context.dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               
               // 标题
-              const Padding(
-                padding: EdgeInsets.all(16),
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Text(
                   '选择音色',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    color: context.textPrimaryColor,
                   ),
                 ),
               ),
               
-              const Divider(height: 1),
+              Divider(height: 1, color: context.dividerColor),
               
               // 音色列表
               Flexible(
@@ -402,7 +429,7 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
                     // Doubao 2.0 音色
                     _buildVoiceCategory('Doubao 2.0 (推荐)', voice2List),
                     
-                    const Divider(height: 1),
+                    Divider(height: 1, color: context.dividerColor),
                     
                     // Doubao 1.0 音色
                     _buildVoiceCategory('Doubao 1.0', voice1List),
@@ -429,7 +456,7 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+              color: context.textSecondaryColor,
             ),
           ),
         ),
@@ -448,16 +475,16 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
         height: 40,
         decoration: BoxDecoration(
           color: isSelected 
-              ? const Color(UIConstants.accentColor).withValues(alpha: 0.1)
-              : Colors.grey[100],
+              ? context.primaryColor.withValues(alpha: 0.1)
+              : context.textSecondaryColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
           child: Icon(
             voice.gender == 'male' ? Icons.male : Icons.female,
             color: isSelected 
-                ? const Color(UIConstants.accentColor)
-                : Colors.grey[600],
+                ? context.primaryColor
+                : context.textSecondaryColor,
           ),
         ),
       ),
@@ -465,19 +492,20 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
         voice.displayName,
         style: TextStyle(
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: context.textPrimaryColor,
         ),
       ),
       subtitle: Text(
         voice.description,
         style: TextStyle(
           fontSize: 12,
-          color: Colors.grey[500],
+          color: context.textSecondaryColor,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
       trailing: isSelected 
-          ? const Icon(Icons.check_circle, color: Color(UIConstants.accentColor))
+          ? Icon(Icons.check_circle, color: context.primaryColor)
           : null,
       onTap: () {
         settingsService.saveVoiceType(voice.voiceType);
@@ -486,55 +514,250 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
     );
   }
 
-  /// 测试 TTS
+  /// 测试 TTS - 仅测试连接，不触发保存，显示结果弹窗
   Future<void> _testTts() async {
     setState(() {
       _isTesting = true;
     });
 
     try {
-      // 保存当前配置
-      await _saveSettings();
+      // 仅同步配置到服务，不保存到设置
+      ttsService.setVoiceType(settingsService.voiceType.value);
       
-      // 使用 synthesizeText 测试语音合成
-      final result = await ttsService.synthesizeText(
-        text: '你好，这是古韵诵读的语音测试。声音清晰自然，适合朗读古诗词。',
-        voiceType: settingsService.voiceType.value,
-        audioParams: AudioParams(
-          speechRate: settingsService.speechRate.value,
-          loudnessRate: settingsService.loudnessRate.value,
-        ),
-        poemId: 0, // 测试用 ID
-        onProgress: (progress) {
-          // 可以在这里显示进度
-        },
-      );
+      // 仅测试连接，不合成完整文本
+      final result = await ttsService.testConnection();
       
-      if (result.isSuccess) {
-        Get.snackbar(
-          '测试成功',
-          '语音合成正常，文件保存在: ${result.audioPath}',
-          snackPosition: SnackPosition.BOTTOM,
-          duration: const Duration(seconds: 3),
-        );
-      } else {
-        Get.snackbar(
-          '测试失败',
-          result.errorMessage ?? '语音合成失败',
-          snackPosition: SnackPosition.BOTTOM,
-        );
-      }
-    } catch (e) {
-      Get.snackbar(
-        '测试失败',
-        '语音合成出错: $e',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      // 显示结果弹窗
+      _showTestResultDialog(result);
     } finally {
       setState(() {
         _isTesting = false;
       });
     }
+  }
+  
+  /// 显示测试结果弹窗
+  void _showTestResultDialog(ConnectionResult result) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: context.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Center(
+          child: Column(
+            children: [
+              Icon(
+                result.isSuccess ? Icons.check_circle : Icons.error,
+                color: result.isSuccess ? Colors.green : Colors.red,
+                size: 48,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                result.isSuccess ? '测试成功' : '测试失败',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: context.textPrimaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+        content: Text(
+          result.isSuccess 
+              ? '语音合成服务连接正常'
+              : (result.errorMessage ?? '连接失败'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 14,
+            color: context.textSecondaryColor,
+            height: 1.5,
+          ),
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              '关闭',
+              style: TextStyle(color: context.textSecondaryColor),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Get.back();
+              _showDebugLogs();
+            },
+            icon: const Icon(Icons.bug_report, size: 18),
+            label: const Text('查看日志'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: context.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  /// 显示调试日志
+  void _showDebugLogs() {
+    final logs = ttsService.debugLogs;
+    
+    Get.bottomSheet(
+      Container(
+        height: Get.height * 0.85, // 接近全屏高度
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // 拖动条
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12, bottom: 12),
+                decoration: BoxDecoration(
+                  color: context.dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // 标题栏
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '调试日志',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: context.textPrimaryColor,
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            ttsService.clearDebugLogs();
+                            setState(() {});
+                          },
+                          child: const Text('清空'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Get.back(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              // 日志列表 - 使用 Expanded 避免 overflow
+              Expanded(
+                child: Obx(() {
+                  if (logs.isEmpty) {
+                    return Center(
+                      child: Text(
+                        '暂无日志',
+                        style: TextStyle(color: context.textSecondaryColor),
+                      ),
+                    );
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: logs.length,
+                    itemBuilder: (context, index) {
+                      final log = logs[index];
+                      return _buildLogItem(log);
+                    },
+                  );
+                }),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  /// 构建日志项
+  Widget _buildLogItem(TtsDebugLog log) {
+    Color typeColor;
+    IconData typeIcon;
+    
+    switch (log.type) {
+      case 'error':
+        typeColor = Colors.red;
+        typeIcon = Icons.error_outline;
+        break;
+      case 'request':
+        typeColor = Colors.blue;
+        typeIcon = Icons.send;
+        break;
+      case 'response':
+        typeColor = Colors.green;
+        typeIcon = Icons.download_done;
+        break;
+      default:
+        typeColor = context.textSecondaryColor;
+        typeIcon = Icons.info_outline;
+    }
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(typeIcon, size: 16, color: typeColor),
+              const SizedBox(width: 8),
+              Text(
+                log.title,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: typeColor,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}:${log.timestamp.second.toString().padLeft(2, '0')}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: context.textSecondaryColor.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+          if (log.content.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              log.content,
+              style: TextStyle(
+                fontSize: 12,
+                color: context.textSecondaryColor,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   /// 保存设置
@@ -542,10 +765,9 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
     // 同步到 TtsService
     ttsService.setVoiceType(settingsService.voiceType.value);
     
-    Get.snackbar(
-      '保存成功',
-      'TTS 配置已更新',
-      snackPosition: SnackPosition.BOTTOM,
+    AppDialog.success(
+      title: '保存成功',
+      message: 'TTS 配置已更新',
     );
   }
 
@@ -565,10 +787,9 @@ class _TtsConfigPageState extends State<TtsConfigPage> {
               settingsService.resetTtsConfig();
               _loadSettings();
               Get.back();
-              Get.snackbar(
-                '已重置',
-                'TTS 配置已恢复为默认值',
-                snackPosition: SnackPosition.BOTTOM,
+              AppDialog.success(
+                title: '已重置',
+                message: 'TTS 配置已恢复为默认值',
               );
             },
             style: ElevatedButton.styleFrom(

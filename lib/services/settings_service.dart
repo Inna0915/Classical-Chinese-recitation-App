@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/ai_models.dart';
 import '../constants/app_constants.dart';
 import '../constants/tts_voices.dart';
+import '../core/theme/app_theme.dart';
 import '../models/config/llm_config.dart';
 
 /// 设置服务 - 管理应用配置
@@ -15,6 +17,8 @@ class SettingsService extends GetxService {
   
   // ==================== 外观配置 Keys ====================
   static const String _keyUseSystemFont = 'use_system_font';
+  static const String _keyPrimaryColor = 'primary_color';
+  static const String _keyThemeMode = 'theme_mode';
   
   // ==================== TTS 配置 Keys ====================
   static const String _keyVoiceType = 'tts_voice_type';
@@ -30,6 +34,12 @@ class SettingsService extends GetxService {
   // ==================== 外观 Observable 配置项 ====================
   /// 是否使用系统字体
   final RxBool useSystemFont = false.obs;
+  
+  /// 当前主题色
+  final Rx<Color> primaryColor = TraditionalChineseColors.cinnabar.obs;
+  
+  /// 当前主题模式
+  final Rx<ThemeMode> themeMode = ThemeMode.system.obs;
 
   // ==================== TTS Observable 配置项 ====================
   /// 当前选择的音色
@@ -66,6 +76,18 @@ class SettingsService extends GetxService {
   void _loadSettings() {
     // 外观配置
     useSystemFont.value = _prefs.getBool(_keyUseSystemFont) ?? false;
+    
+    // 主题颜色
+    final colorValue = _prefs.getInt(_keyPrimaryColor);
+    if (colorValue != null) {
+      primaryColor.value = Color(colorValue);
+    }
+    
+    // 主题模式
+    final modeIndex = _prefs.getInt(_keyThemeMode);
+    if (modeIndex != null && modeIndex >= 0 && modeIndex < ThemeMode.values.length) {
+      themeMode.value = ThemeMode.values[modeIndex];
+    }
     
     // TTS 配置 - 只加载音色和语音参数
     voiceType.value = _prefs.getString(_keyVoiceType) ?? TtsVoices.defaultVoice;
@@ -160,6 +182,26 @@ class SettingsService extends GetxService {
   Future<void> saveUseSystemFont(bool use) async {
     await _prefs.setBool(_keyUseSystemFont, use);
     useSystemFont.value = use;
+  }
+  
+  /// 保存主题颜色
+  Future<void> savePrimaryColor(Color color) async {
+    await _prefs.setInt(_keyPrimaryColor, color.value);
+    primaryColor.value = color;
+  }
+  
+  /// 保存主题模式
+  Future<void> saveThemeMode(ThemeMode mode) async {
+    await _prefs.setInt(_keyThemeMode, mode.index);
+    themeMode.value = mode;
+  }
+  
+  /// 获取当前是否为深色模式（考虑系统设置）
+  bool get isDarkMode {
+    if (themeMode.value == ThemeMode.dark) return true;
+    if (themeMode.value == ThemeMode.light) return false;
+    // 跟随系统
+    return Get.isPlatformDarkMode;
   }
 
   // ==================== TTS 配置方法 ====================

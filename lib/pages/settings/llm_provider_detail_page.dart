@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:get/get.dart';
-import '../../constants/app_constants.dart';
+import '../../core/theme/app_theme.dart';
 import '../../models/config/llm_config.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/settings/index.dart';
@@ -65,9 +65,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
         centerTitle: true,
         title: Text(
@@ -80,10 +78,10 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
         actions: [
           TextButton(
             onPressed: _saveConfig,
-            child: const Text(
+            child: Text(
               '保存',
               style: TextStyle(
-                color: Color(UIConstants.accentColor),
+                color: context.primaryColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -127,9 +125,10 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
           const SizedBox(height: 12),
           Text(
             widget.providerType.displayName,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
+              color: context.textPrimaryColor,
             ),
           ),
           const SizedBox(height: 4),
@@ -137,7 +136,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
             widget.providerType.defaultBaseUrl,
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey[500],
+              color: context.textSecondaryColor,
             ),
           ),
         ],
@@ -157,17 +156,17 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
               _isEnabled = value;
             });
           },
-          title: const Text('启用此服务'),
+          title: Text('启用此服务', style: TextStyle(color: context.textPrimaryColor)),
           subtitle: Text(
             _isEnabled 
                 ? '该服务可用于诗词 AI 功能' 
                 : '开启后才能使用此服务',
             style: TextStyle(
               fontSize: 12,
-              color: Colors.grey[500],
+              color: context.textSecondaryColor,
             ),
           ),
-          activeColor: const Color(UIConstants.accentColor),
+          activeThumbColor: context.primaryColor,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16),
         ),
       ],
@@ -190,7 +189,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
+                  color: context.textSecondaryColor,
                 ),
               ),
               const SizedBox(height: 8),
@@ -200,24 +199,24 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                 enabled: _isEnabled,
                 decoration: InputDecoration(
                   hintText: '请输入 API Key',
-                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  hintStyle: TextStyle(color: context.textSecondaryColor.withValues(alpha: 0.6)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: BorderSide(color: context.dividerColor),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: BorderSide(color: context.dividerColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(UIConstants.accentColor)),
+                    borderSide: BorderSide(color: context.primaryColor),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscureApiKey ? Icons.visibility_off : Icons.visibility,
-                      color: Colors.grey[400],
+                      color: context.textSecondaryColor.withValues(alpha: 0.6),
                       size: 20,
                     ),
                     onPressed: () {
@@ -232,7 +231,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
           ),
         ),
         
-        const Divider(height: 1, indent: 16, endIndent: 16),
+        Divider(height: 1, indent: 16, endIndent: 16, color: context.dividerColor),
         
         // Base URL
         Padding(
@@ -245,7 +244,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: Colors.grey[700],
+                  color: context.textSecondaryColor,
                 ),
               ),
               const SizedBox(height: 8),
@@ -254,18 +253,18 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                 enabled: _isEnabled,
                 decoration: InputDecoration(
                   hintText: widget.providerType.defaultBaseUrl,
-                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  hintStyle: TextStyle(color: context.textSecondaryColor.withValues(alpha: 0.6)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: BorderSide(color: context.dividerColor),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: BorderSide(color: context.dividerColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(UIConstants.accentColor)),
+                    borderSide: BorderSide(color: context.primaryColor),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                 ),
@@ -275,7 +274,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                 '留空使用官方默认地址',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey[500],
+                  color: context.textSecondaryColor,
                 ),
               ),
             ],
@@ -304,7 +303,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
-                        color: Colors.grey[700],
+                        color: context.textSecondaryColor,
                       ),
                     ),
                   ),
@@ -319,7 +318,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                         : const Icon(Icons.refresh, size: 18),
                     label: const Text('获取列表'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(UIConstants.accentColor),
+                      backgroundColor: context.primaryColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       textStyle: const TextStyle(fontSize: 12),
@@ -335,18 +334,18 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                 enabled: _isEnabled,
                 decoration: InputDecoration(
                   hintText: widget.providerType.defaultModel,
-                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  hintStyle: TextStyle(color: context.textSecondaryColor.withValues(alpha: 0.6)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: BorderSide(color: context.dividerColor),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: BorderSide(color: context.dividerColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(UIConstants.accentColor)),
+                    borderSide: BorderSide(color: context.primaryColor),
                   ),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   suffixIcon: _config.availableModels.isNotEmpty
@@ -371,7 +370,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                         model,
                         style: TextStyle(
                           fontSize: 11,
-                          color: isSelected ? Colors.white : Colors.grey[800],
+                          color: isSelected ? Colors.white : context.textPrimaryColor,
                         ),
                       ),
                       onPressed: _isEnabled
@@ -382,8 +381,8 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                             }
                           : null,
                       backgroundColor: isSelected
-                          ? const Color(UIConstants.accentColor)
-                          : Colors.grey[100],
+                          ? context.primaryColor
+                          : context.cardColor,
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     );
                   }).toList(),
@@ -412,18 +411,18 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                 maxLines: 4,
                 decoration: InputDecoration(
                   hintText: '输入自定义 System Prompt...\n例如：你是一位古诗词专家，擅长赏析和翻译古典诗词。',
-                  hintStyle: TextStyle(color: Colors.grey[400]),
+                  hintStyle: TextStyle(color: context.textSecondaryColor.withValues(alpha: 0.6)),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: BorderSide(color: context.dividerColor),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
+                    borderSide: BorderSide(color: context.dividerColor),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(UIConstants.accentColor)),
+                    borderSide: BorderSide(color: context.primaryColor),
                   ),
                   contentPadding: const EdgeInsets.all(12),
                 ),
@@ -433,7 +432,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                 '自定义 AI 的角色和行为方式',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey[500],
+                  color: context.textSecondaryColor,
                 ),
               ),
             ],
@@ -452,7 +451,7 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
         icon: const Icon(Icons.check_circle_outline),
         label: const Text('设为默认服务商'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(UIConstants.accentColor),
+          backgroundColor: context.primaryColor,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(
@@ -508,9 +507,9 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
   void _showModelSelector() {
     Get.bottomSheet(
       Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: SafeArea(
           child: Column(
@@ -521,21 +520,22 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                 height: 4,
                 margin: const EdgeInsets.only(top: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: context.dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.all(16),
+              Padding(
+                padding: const EdgeInsets.all(16),
                 child: Text(
                   '选择模型',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    color: context.textPrimaryColor,
                   ),
                 ),
               ),
-              const Divider(height: 1),
+              Divider(height: 1, color: context.dividerColor),
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
@@ -544,9 +544,9 @@ class _LlmProviderDetailPageState extends State<LlmProviderDetailPage> {
                     final model = _config.availableModels[index];
                     final isSelected = _customModelController.text == model;
                     return ListTile(
-                      title: Text(model),
+                      title: Text(model, style: TextStyle(color: context.textPrimaryColor)),
                       trailing: isSelected
-                          ? const Icon(Icons.check, color: Color(UIConstants.accentColor))
+                          ? Icon(Icons.check, color: context.primaryColor)
                           : null,
                       onTap: () {
                         setState(() {

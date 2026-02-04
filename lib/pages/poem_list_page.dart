@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_constants.dart';
+import '../core/theme/app_theme.dart';
 import '../controllers/poem_controller.dart';
 import '../models/poem.dart';
 import '../models/poem_group.dart';
+import '../widgets/custom_search_bar.dart';
+import '../widgets/dialogs/app_dialog.dart';
 import 'add_poem_page.dart';
 import 'poem_detail_page.dart';
 
-/// 诗词列表页 - WeChat-like Minimalism
+/// 诗词列表页 - WeChat-like Minimalism with Fixed Search Bar
 class PoemListPage extends StatefulWidget {
   const PoemListPage({super.key});
 
@@ -22,37 +25,33 @@ class _PoemListPageState extends State<PoemListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(UIConstants.backgroundColor),
       appBar: AppBar(
-        backgroundColor: const Color(UIConstants.backgroundColor),
-        elevation: 0,
-        title: const Text(
-          '古韵诵读',
-          style: TextStyle(
-            color: Color(UIConstants.textPrimaryColor),
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Color(UIConstants.textPrimaryColor)),
-            onPressed: () => _showSearchDialog(controller),
-          ),
-        ],
+        title: const Text('古韵诵读'),
       ),
-      body: Obx(() {
-        if (controller.poems.isEmpty) {
-          return _buildEmptyView();
-        }
+      body: Column(
+        children: [
+          // 1. 固定搜索栏
+          SearchBarWithController(
+            onSearch: (keyword) => controller.searchPoems(keyword),
+            hintText: '搜索诗词...',
+            margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          ),
+          
+          // 2. 分组选择器
+          _buildGroupSelector(context, controller),
+          
+          // 3. 诗词列表
+          Expanded(
+            child: Obx(() {
+              if (controller.poems.isEmpty) {
+                return _buildEmptyView(context);
+              }
+              
+              if (controller.displayPoems.isEmpty) {
+                return _buildNoResultsView(context);
+              }
 
-        return Column(
-          children: [
-            // 分组选择器
-            _buildGroupSelector(controller),
-            // 诗词列表
-            Expanded(
-              child: ListView.builder(
+              return ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.only(
                   left: 16,
@@ -60,10 +59,10 @@ class _PoemListPageState extends State<PoemListPage> {
                   top: 8,
                   bottom: 80, // 增加底部padding，防止被MiniPlayer遮挡
                 ),
-                itemCount: controller.filteredPoems.length,
+                itemCount: controller.displayPoems.length,
                 itemBuilder: (context, index) {
-                  final poem = controller.filteredPoems[index];
-                  return _PoemListItem(
+                  final poem = controller.displayPoems[index];
+                  return PoemListItem(
                     poem: poem,
                     onTap: () {
                       controller.selectPoem(poem);
@@ -72,21 +71,21 @@ class _PoemListPageState extends State<PoemListPage> {
                     onMorePressed: () => _showPoemOptions(context, poem),
                   );
                 },
-              ),
-            ),
-          ],
-        );
-      }),
+              );
+            }),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Get.to(() => const AddPoemPage()),
-        backgroundColor: const Color(UIConstants.accentColor),
+        backgroundColor: context.primaryColor,
         elevation: 0,
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  Widget _buildEmptyView() {
+  Widget _buildEmptyView(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -94,13 +93,36 @@ class _PoemListPageState extends State<PoemListPage> {
           Icon(
             Icons.menu_book_outlined,
             size: 64,
-            color: const Color(UIConstants.textSecondaryColor).withOpacity(0.3),
+            color: context.textSecondaryColor.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
             '暂无诗词',
             style: TextStyle(
-              color: const Color(UIConstants.textSecondaryColor).withOpacity(0.6),
+              color: context.textSecondaryColor.withValues(alpha: 0.6),
+              fontSize: 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildNoResultsView(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off_outlined,
+            size: 64,
+            color: context.textSecondaryColor.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '未找到匹配的诗词',
+            style: TextStyle(
+              color: context.textSecondaryColor.withValues(alpha: 0.6),
               fontSize: 15,
             ),
           ),
@@ -109,15 +131,16 @@ class _PoemListPageState extends State<PoemListPage> {
     );
   }
 
-  Widget _buildGroupSelector(PoemController controller) {
+  Widget _buildGroupSelector(BuildContext context, PoemController controller) {
     return Container(
       height: 40,
-      margin: const EdgeInsets.only(top: 4, bottom: 8),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Obx(() {
         final List<Widget> chips = [];
         
         // 全部（仅添加一次）
         chips.add(_buildGroupChip(
+          context: context,
           label: '全部',
           isSelected: controller.selectedGroupId.value == -1,
           onTap: () => controller.selectGroup(-1),
@@ -127,6 +150,7 @@ class _PoemListPageState extends State<PoemListPage> {
         for (final group in controller.groups) {
           if (group.name == '全部') continue; // 跳过名为"全部"的分组
           chips.add(_buildGroupChip(
+            context: context,
             label: group.name,
             isSelected: controller.selectedGroupId.value == group.id,
             onTap: () => controller.selectGroup(group.id),
@@ -146,6 +170,7 @@ class _PoemListPageState extends State<PoemListPage> {
   }
 
   Widget _buildGroupChip({
+    required BuildContext context,
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
@@ -164,13 +189,13 @@ class _PoemListPageState extends State<PoemListPage> {
         constraints: const BoxConstraints(maxWidth: 80),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(UIConstants.accentColor) : const Color(UIConstants.cardColor),
+          color: isSelected ? context.primaryColor : context.cardColor,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           displayLabel,
           style: TextStyle(
-            color: isSelected ? Colors.white : const Color(UIConstants.textPrimaryColor),
+            color: isSelected ? Colors.white : context.textPrimaryColor,
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
@@ -185,8 +210,8 @@ class _PoemListPageState extends State<PoemListPage> {
   void _showGroupOptions(BuildContext context, PoemGroup group) {
     Get.bottomSheet(
       Container(
-        decoration: const BoxDecoration(
-          color: Color(UIConstants.cardColor),
+        decoration: BoxDecoration(
+          color: context.cardColor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(UIConstants.defaultRadius)),
         ),
         child: SafeArea(
@@ -198,7 +223,7 @@ class _PoemListPageState extends State<PoemListPage> {
                 height: 4,
                 margin: const EdgeInsets.only(top: 8),
                 decoration: BoxDecoration(
-                  color: const Color(UIConstants.dividerColor),
+                  color: context.dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -212,7 +237,7 @@ class _PoemListPageState extends State<PoemListPage> {
                 title: const Text('重命名'),
                 onTap: () {
                   Get.back();
-                  _showRenameGroupDialog(group);
+                  _showRenameGroupDialog(context, group);
                 },
               ),
               ListTile(
@@ -220,7 +245,7 @@ class _PoemListPageState extends State<PoemListPage> {
                 title: const Text('删除分组', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Get.back();
-                  _showDeleteGroupConfirm(group);
+                  _showDeleteGroupConfirm(context, group);
                 },
               ),
               const SizedBox(height: 8),
@@ -234,8 +259,8 @@ class _PoemListPageState extends State<PoemListPage> {
   void _showPoemOptions(BuildContext context, Poem poem) {
     Get.bottomSheet(
       Container(
-        decoration: const BoxDecoration(
-          color: Color(UIConstants.cardColor),
+        decoration: BoxDecoration(
+          color: context.cardColor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(UIConstants.defaultRadius)),
         ),
         child: SafeArea(
@@ -247,7 +272,7 @@ class _PoemListPageState extends State<PoemListPage> {
                 height: 4,
                 margin: const EdgeInsets.only(top: 8),
                 decoration: BoxDecoration(
-                  color: const Color(UIConstants.dividerColor),
+                  color: context.dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -261,7 +286,7 @@ class _PoemListPageState extends State<PoemListPage> {
                 title: const Text('移动到分组'),
                 onTap: () {
                   Get.back();
-                  _showMoveToGroupDialog(poem);
+                  _showMoveToGroupDialog(context, poem);
                 },
               ),
               ListTile(
@@ -269,7 +294,7 @@ class _PoemListPageState extends State<PoemListPage> {
                 title: const Text('删除', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Get.back();
-                  _showDeletePoemConfirm(poem);
+                  _showDeletePoemConfirm(context, poem);
                 },
               ),
               const SizedBox(height: 8),
@@ -280,21 +305,22 @@ class _PoemListPageState extends State<PoemListPage> {
     );
   }
 
-  void _showMoveToGroupDialog(Poem poem) {
+  void _showMoveToGroupDialog(BuildContext context, Poem poem) {
     Get.dialog(
       AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
+        backgroundColor: context.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(UIConstants.defaultRadius)),
         title: const Text('移动到分组', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
         content: Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            _buildMoveChip('未分组', poem.groupId == null, () {
+            _buildMoveChip(context, '未分组', poem.groupId == null, () {
               controller.movePoemToGroup(poem.id, null);
               Get.back();
             }),
             ...controller.groups.map((g) => _buildMoveChip(
+              context,
               g.name,
               poem.groupId == g.id,
               () {
@@ -308,19 +334,19 @@ class _PoemListPageState extends State<PoemListPage> {
     );
   }
 
-  Widget _buildMoveChip(String label, bool isSelected, VoidCallback onTap) {
+  Widget _buildMoveChip(BuildContext context, String label, bool isSelected, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(UIConstants.accentColor) : const Color(UIConstants.backgroundColor),
+          color: isSelected ? context.primaryColor : context.backgroundColor,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : const Color(UIConstants.textPrimaryColor),
+            color: isSelected ? Colors.white : context.textPrimaryColor,
             fontSize: 13,
           ),
         ),
@@ -328,35 +354,25 @@ class _PoemListPageState extends State<PoemListPage> {
     );
   }
 
-  void _showDeletePoemConfirm(Poem poem) {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(UIConstants.defaultRadius)),
-        title: const Text('删除诗词', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-        content: Text('确定要删除《${poem.title}》吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消', style: TextStyle(color: Color(UIConstants.textSecondaryColor))),
-          ),
-          TextButton(
-            onPressed: () {
-              controller.deletePoem(poem.id);
-              Get.back();
-            },
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+  void _showDeletePoemConfirm(BuildContext context, Poem poem) {
+    AppDialog.confirm(
+      title: '删除诗词',
+      message: '确定要删除《${poem.title}》吗？',
+      confirmText: '删除',
+      cancelText: '取消',
+      confirmColor: Colors.red,
+    ).then((confirmed) {
+      if (confirmed == true) {
+        controller.deletePoem(poem.id);
+      }
+    });
   }
 
-  void _showRenameGroupDialog(PoemGroup group) {
+  void _showRenameGroupDialog(BuildContext context, PoemGroup group) {
     final controller = TextEditingController(text: group.name);
     Get.dialog(
       AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
+        backgroundColor: context.cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(UIConstants.defaultRadius)),
         title: const Text('重命名分组', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
         content: TextField(
@@ -365,7 +381,7 @@ class _PoemListPageState extends State<PoemListPage> {
           decoration: InputDecoration(
             hintText: '分组名称',
             filled: true,
-            fillColor: const Color(UIConstants.backgroundColor),
+            fillColor: context.backgroundColor,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
@@ -392,78 +408,29 @@ class _PoemListPageState extends State<PoemListPage> {
     );
   }
 
-  void _showDeleteGroupConfirm(PoemGroup group) {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(UIConstants.defaultRadius)),
-        title: const Text('删除分组', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-        content: Text('确定要删除"${group.name}"吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消'),
-          ),
-          TextButton(
-            onPressed: () {
-              PoemController.to.deleteGroup(group.id);
-              Get.back();
-            },
-            child: const Text('删除', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSearchDialog(PoemController controller) {
-    final searchController = TextEditingController();
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(UIConstants.defaultRadius)),
-        title: const Text('搜索诗词', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-        content: TextField(
-          controller: searchController,
-          autofocus: true,
-          decoration: InputDecoration(
-            hintText: '输入标题、作者或内容',
-            filled: true,
-            fillColor: const Color(UIConstants.backgroundColor),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              controller.loadPoems();
-              Get.back();
-            },
-            child: const Text('重置'),
-          ),
-          TextButton(
-            onPressed: () {
-              controller.searchPoems(searchController.text);
-              Get.back();
-            },
-            child: const Text('搜索'),
-          ),
-        ],
-      ),
-    );
+  void _showDeleteGroupConfirm(BuildContext context, PoemGroup group) {
+    AppDialog.confirm(
+      title: '删除分组',
+      message: '确定要删除"${group.name}"吗？',
+      confirmText: '删除',
+      cancelText: '取消',
+      confirmColor: Colors.red,
+    ).then((confirmed) {
+      if (confirmed == true) {
+        PoemController.to.deleteGroup(group.id);
+      }
+    });
   }
 }
 
-/// 诗词列表项
-class _PoemListItem extends StatelessWidget {
+/// 诗词列表项 - 公共组件，可被书架页和收藏页复用
+class PoemListItem extends StatelessWidget {
   final Poem poem;
   final VoidCallback onTap;
   final VoidCallback onMorePressed;
 
-  const _PoemListItem({
+  const PoemListItem({
+    super.key,
     required this.poem,
     required this.onTap,
     required this.onMorePressed,
@@ -476,7 +443,7 @@ class _PoemListItem extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: const Color(UIConstants.cardColor),
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
       ),
       child: InkWell(
@@ -492,18 +459,18 @@ class _PoemListItem extends StatelessWidget {
                   children: [
                     Text(
                       poem.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: Color(UIConstants.textPrimaryColor),
+                        color: context.textPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '${poem.dynasty ?? ''} · ${poem.author}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Color(UIConstants.textSecondaryColor),
+                        color: context.textSecondaryColor,
                       ),
                     ),
                   ],
@@ -515,7 +482,7 @@ class _PoemListItem extends StatelessWidget {
                 return IconButton(
                   icon: Icon(
                     isFavorite ? Icons.favorite : Icons.favorite_border,
-                    color: isFavorite ? Colors.red : const Color(UIConstants.textSecondaryColor),
+                    color: isFavorite ? Colors.red : context.textSecondaryColor,
                     size: 20,
                   ),
                   onPressed: () => controller.toggleFavorite(poem.id!),
@@ -525,7 +492,7 @@ class _PoemListItem extends StatelessWidget {
               }),
               const SizedBox(width: 4),
               IconButton(
-                icon: const Icon(Icons.more_vert, color: Color(UIConstants.textSecondaryColor)),
+                icon: Icon(Icons.more_vert, color: context.textSecondaryColor),
                 onPressed: onMorePressed,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 32, minHeight: 32),

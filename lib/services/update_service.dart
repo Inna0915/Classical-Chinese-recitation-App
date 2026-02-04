@@ -8,7 +8,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pub_semver/pub_semver.dart';
 import '../constants/app_constants.dart';
+import '../core/theme/app_theme.dart';
 import '../models/github_release.dart';
+import '../widgets/dialogs/app_dialog.dart';
 
 /// 更新服务 - 管理应用自动更新
 /// 
@@ -22,6 +24,12 @@ class UpdateService extends GetxService {
   final Dio _dio = Dio(BaseOptions(
     connectTimeout: const Duration(seconds: 30),
     receiveTimeout: const Duration(seconds: 120),
+    followRedirects: true,
+    maxRedirects: 5,
+    validateStatus: (status) => status != null && status < 500,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 10; Mobile) Chrome/91.0.4472.120',
+    },
   ));
 
   // GitHub 仓库信息
@@ -117,29 +125,27 @@ class UpdateService extends GetxService {
       if (_hasUpdate(currentV, release.version)) {
         _showUpdateDialog(release);
       } else if (isManual) {
-        // 手动检查且已是最新
-        Get.snackbar(
-          '已是最新版本',
-          '当前版本 $currentV 已是最新',
-          snackPosition: SnackPosition.BOTTOM,
+        // 手动检查且已是最新 - 使用美观的对话框
+        AppDialog.success(
+          title: '已是最新版本',
+          message: '当前版本 $currentV 已是最新版本',
+          confirmText: '确定',
         );
       }
     } on DioException catch (e) {
       debugPrint('[UpdateService] Network error: $e');
       if (isManual) {
-        Get.snackbar(
-          '检查失败',
-          '网络连接异常，请稍后重试',
-          snackPosition: SnackPosition.BOTTOM,
+        AppDialog.info(
+          title: '检查失败',
+          message: '网络连接异常，请稍后重试',
         );
       }
     } catch (e) {
       debugPrint('[UpdateService] Error: $e');
       if (isManual) {
-        Get.snackbar(
-          '检查失败',
-          '检查更新时发生错误',
-          snackPosition: SnackPosition.BOTTOM,
+        AppDialog.info(
+          title: '检查失败',
+          message: '检查更新时发生错误',
         );
       }
     } finally {
@@ -167,93 +173,111 @@ class UpdateService extends GetxService {
     }
 
     Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: Text(
-          '发现新版本 v${release.version}',
-          style: const TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: Get.height * 0.5,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                release.name.isNotEmpty ? release.name : '新版本更新',
+      Builder(
+        builder: (context) {
+          return AlertDialog(
+            backgroundColor: context.cardColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Center(
+              child: Text(
+                '发现新版本 v${release.version}',
                 style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: Color(UIConstants.accentColor),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
                 ),
               ),
-              const SizedBox(height: 12),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Text(
-                    release.body.isNotEmpty ? release.body : '暂无更新说明',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(UIConstants.textSecondaryColor),
+            ),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 320,
+                maxHeight: Get.height * 0.5,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    release.name.isNotEmpty ? release.name : '新版本更新',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 15,
+                      color: context.primaryColor,
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      child: Text(
+                        release.body.isNotEmpty ? release.body : '暂无更新说明',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: context.textSecondaryColor,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // 下载进度显示
+                  Obx(() {
+                    if (!isDownloading.value) return const SizedBox.shrink();
+                    return Column(
+                      children: [
+                        LinearProgressIndicator(
+                          value: downloadProgress.value / 100,
+                          backgroundColor: context.dividerColor,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            context.primaryColor,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          downloadStatus.value,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.textSecondaryColor,
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: [
+              Obx(() => TextButton(
+                onPressed: isDownloading.value ? null : () => Get.back(),
+                child: Text(
+                  '稍后',
+                  style: TextStyle(
+                    color: isDownloading.value 
+                        ? context.textSecondaryColor.withValues(alpha: 0.5)
+                        : context.textSecondaryColor,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              // 下载进度显示
-              Obx(() {
-                if (!isDownloading.value) return const SizedBox.shrink();
-                return Column(
-                  children: [
-                    LinearProgressIndicator(
-                      value: downloadProgress.value / 100,
-                      backgroundColor: const Color(UIConstants.dividerColor),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(UIConstants.accentColor),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      downloadStatus.value,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(UIConstants.textSecondaryColor),
-                      ),
-                    ),
-                  ],
-                );
-              }),
+              )),
+              Obx(() => ElevatedButton(
+                onPressed: isDownloading.value
+                    ? null
+                    : () => _startDownload(apkUrl),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: context.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(isDownloading.value ? '下载中...' : '立即更新'),
+              )),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: isDownloading.value ? null : () => Get.back(),
-            child: const Text(
-              '稍后',
-              style: TextStyle(
-                color: Color(UIConstants.textSecondaryColor),
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: isDownloading.value
-                ? null
-                : () => _startDownload(apkUrl),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(UIConstants.accentColor),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('立即更新'),
-          ),
-        ],
+          );
+        },
       ),
       barrierDismissible: !isDownloading.value,
     );
@@ -273,59 +297,111 @@ class UpdateService extends GetxService {
       // 1. 请求通知权限（Android 13+ 需要）
       await _requestNotificationPermission();
 
-      // 2. 应用镜像加速
-      String downloadUrl = apkUrl;
-      if (_useMirror && apkUrl.contains('github.com')) {
-        downloadUrl = '$_mirrorPrefix$apkUrl';
-        debugPrint('[UpdateService] Using mirror: $downloadUrl');
-      }
-
-      // 3. 获取应用私有缓存目录 - Android 13+ 无需存储权限
+      // 2. 获取应用私有缓存目录 - Android 13+ 无需存储权限
       final directory = await getTemporaryDirectory();
       final savePath = '${directory.path}/guyun_update.apk';
       _downloadedFilePath = savePath;
 
       debugPrint('[UpdateService] Download to: $savePath');
 
-      // 4. 开始下载
-      await _dio.download(
-        downloadUrl,
-        savePath,
-        onReceiveProgress: (received, total) {
-          if (total > 0) {
-            final progress = (received / total * 100).toDouble();
-            downloadProgress.value = progress;
-            downloadStatus.value = '下载中 ${progress.toStringAsFixed(1)}%';
-          }
-        },
-      );
+      // 3. 尝试下载（先使用镜像，失败则回退到原始 URL）
+      bool downloadSuccess = false;
+      
+      // 尝试 1: 使用镜像
+      if (_useMirror && apkUrl.contains('github.com')) {
+        final mirrorUrl = '$_mirrorPrefix$apkUrl';
+        debugPrint('[UpdateService] Trying mirror: $mirrorUrl');
+        downloadSuccess = await _tryDownload(mirrorUrl, savePath);
+      }
+      
+      // 尝试 2: 使用原始 URL
+      if (!downloadSuccess) {
+        debugPrint('[UpdateService] Trying original URL: $apkUrl');
+        downloadStatus.value = '尝试直接下载...';
+        downloadSuccess = await _tryDownload(apkUrl, savePath);
+      }
+      
+      if (!downloadSuccess) {
+        throw DioException(
+          requestOptions: RequestOptions(path: apkUrl),
+          error: '所有下载方式均失败',
+        );
+      }
 
       downloadStatus.value = '下载完成，准备安装...';
       
       // 关闭对话框
       Get.back();
 
-      // 5. 安装 APK
+      // 4. 安装 APK
       await _installApk(savePath);
 
     } on DioException catch (e) {
-      debugPrint('[UpdateService] Download error: $e');
+      debugPrint('[UpdateService] Download error: ${e.type}, ${e.message}');
       downloadStatus.value = '下载失败';
-      Get.snackbar(
-        '下载失败',
-        '网络异常，请稍后重试',
-        snackPosition: SnackPosition.BOTTOM,
+      AppDialog.info(
+        title: '下载失败',
+        message: _getErrorMessage(e),
       );
     } catch (e) {
       debugPrint('[UpdateService] Error: $e');
       downloadStatus.value = '下载失败';
-      Get.snackbar(
-        '下载失败',
-        '发生错误: $e',
-        snackPosition: SnackPosition.BOTTOM,
+      AppDialog.info(
+        title: '下载失败',
+        message: '发生错误: $e',
       );
     } finally {
       isDownloading.value = false;
+    }
+  }
+  
+  /// 尝试下载文件
+  Future<bool> _tryDownload(String url, String savePath) async {
+    try {
+      await _dio.download(
+        url,
+        savePath,
+        options: Options(
+          followRedirects: true,
+          maxRedirects: 5,
+        ),
+        onReceiveProgress: (received, total) {
+          if (total > 0) {
+            final progress = (received / total * 100).toDouble();
+            downloadProgress.value = progress;
+            downloadStatus.value = '下载中 ${progress.toStringAsFixed(1)}%';
+          } else if (received > 0) {
+            // 未知总大小时显示已下载大小
+            final mb = (received / 1024 / 1024).toStringAsFixed(2);
+            downloadStatus.value = '已下载 ${mb}MB';
+          }
+        },
+      );
+      return true;
+    } on DioException catch (e) {
+      debugPrint('[UpdateService] Download failed from $url: ${e.type} - ${e.message}');
+      return false;
+    } catch (e) {
+      debugPrint('[UpdateService] Download failed from $url: $e');
+      return false;
+    }
+  }
+  
+  /// 获取错误提示信息
+  String _getErrorMessage(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return '连接超时，请检查网络后重试';
+      case DioExceptionType.connectionError:
+        return '网络连接失败，请检查网络设置';
+      case DioExceptionType.badResponse:
+        return '服务器响应错误 (${e.response?.statusCode})';
+      case DioExceptionType.cancel:
+        return '下载已取消';
+      default:
+        return '网络异常，请稍后重试';
     }
   }
 

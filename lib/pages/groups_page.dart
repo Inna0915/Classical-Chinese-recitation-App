@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_constants.dart';
 import '../controllers/poem_controller.dart';
+import '../core/theme/app_theme.dart';
 import '../models/poem.dart';
 import '../models/poem_group.dart';
+import '../widgets/dialogs/app_dialog.dart';
 import 'poem_detail_page.dart';
 import 'group_detail_page.dart';
 import 'add_poem_page.dart';
@@ -22,34 +24,20 @@ class _GroupsPageState extends State<GroupsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(UIConstants.backgroundColor),
+      backgroundColor: context.backgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(UIConstants.backgroundColor),
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          '分组浏览',
-          style: TextStyle(
-            color: Color(UIConstants.textPrimaryColor),
-            fontFamily: FontConstants.chineseSerif,
-            fontSize: FontConstants.titleSize,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: const Text('分组浏览'),
         actions: [
           // 搜索按钮
           IconButton(
-            icon: const Icon(
-              Icons.search,
-              color: Color(UIConstants.accentColor),
-            ),
-            onPressed: () => _showSearchDialog(controller),
+            icon: Icon(Icons.search, color: context.primaryColor),
+            onPressed: () => _showSearchDialog(context, controller),
           ),
         ],
       ),
       body: Obx(() {
         if (controller.groups.isEmpty) {
-          return _buildEmptyView();
+          return _buildEmptyView(context);
         }
 
         return ListView.builder(
@@ -83,20 +71,15 @@ class _GroupsPageState extends State<GroupsPage> {
       // 添加按钮
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Get.to(() => const AddPoemPage()),
-        backgroundColor: const Color(UIConstants.accentColor),
+        backgroundColor: context.primaryColor,
         icon: const Icon(Icons.add),
-        label: const Text(
-          '录入诗词',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-          ),
-        ),
+        label: const Text('录入诗词'),
       ),
     );
   }
 
   /// 空数据视图
-  Widget _buildEmptyView() {
+  Widget _buildEmptyView(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -104,13 +87,13 @@ class _GroupsPageState extends State<GroupsPage> {
           Icon(
             Icons.folder_outlined,
             size: 80,
-            color: const Color(UIConstants.textSecondaryColor).withOpacity(0.3),
+            color: context.textSecondaryColor.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
             '暂无分组',
             style: TextStyle(
-              color: const Color(UIConstants.textSecondaryColor).withOpacity(0.6),
+              color: context.textSecondaryColor.withValues(alpha: 0.6),
               fontSize: 16,
             ),
           ),
@@ -118,7 +101,7 @@ class _GroupsPageState extends State<GroupsPage> {
           Text(
             '在书架页面创建分组并添加诗词',
             style: TextStyle(
-              color: const Color(UIConstants.textSecondaryColor).withOpacity(0.4),
+              color: context.textSecondaryColor.withValues(alpha: 0.4),
               fontSize: 14,
             ),
           ),
@@ -133,41 +116,32 @@ class _GroupsPageState extends State<GroupsPage> {
   }
 
   /// 显示搜索对话框
-  void _showSearchDialog(PoemController controller) {
+  void _showSearchDialog(BuildContext context, PoemController controller) {
     final searchController = TextEditingController();
 
     Get.dialog(
       AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
+        backgroundColor: context.cardColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         ),
-        title: const Text(
-          '搜索诗词',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
-          ),
-        ),
+        title: Text('搜索诗词', style: TextStyle(color: context.textPrimaryColor)),
         content: TextField(
           controller: searchController,
           autofocus: true,
+          style: TextStyle(color: context.textPrimaryColor),
           decoration: InputDecoration(
             hintText: '输入标题、作者或内容...',
             hintStyle: TextStyle(
-              color: const Color(UIConstants.textSecondaryColor).withOpacity(0.5),
+              color: context.textSecondaryColor.withValues(alpha: 0.5),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(UIConstants.dividerColor),
-              ),
+              borderSide: BorderSide(color: context.dividerColor),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(UIConstants.accentColor),
-              ),
+              borderSide: BorderSide(color: context.primaryColor),
             ),
           ),
           onSubmitted: (value) {
@@ -181,12 +155,7 @@ class _GroupsPageState extends State<GroupsPage> {
               controller.loadPoems();
               Get.back();
             },
-            child: const Text(
-              '重置',
-              style: TextStyle(
-                color: Color(UIConstants.textSecondaryColor),
-              ),
-            ),
+            child: Text('重置', style: TextStyle(color: context.textSecondaryColor)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -194,7 +163,7 @@ class _GroupsPageState extends State<GroupsPage> {
               Get.back();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(UIConstants.accentColor),
+              backgroundColor: context.primaryColor,
               foregroundColor: Colors.white,
             ),
             child: const Text('搜索'),
@@ -219,114 +188,120 @@ class _GroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      color: const Color(UIConstants.cardColor),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        side: const BorderSide(
-          color: Color(UIConstants.dividerColor),
-        ),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 分组标题
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(UIConstants.accentColor).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 分组标题
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: context.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.folder,
+                        color: context.primaryColor,
+                        size: 20,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.folder,
-                      color: Color(UIConstants.accentColor),
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          group.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(UIConstants.textPrimaryColor),
-                            fontFamily: FontConstants.chineseSerif,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            group.name,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: context.textPrimaryColor,
+                            ),
                           ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '共 ${poems.length} 首诗词',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: context.textSecondaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      color: context.textSecondaryColor,
+                      size: 16,
+                    ),
+                  ],
+                ),
+                
+                // 预览部分诗词
+                if (poems.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Divider(color: context.dividerColor),
+                  const SizedBox(height: 8),
+                  ...poems.take(3).map((poem) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.menu_book,
+                          size: 14,
+                          color: context.textSecondaryColor,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '共 ${poems.length} 首诗词',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(UIConstants.textSecondaryColor),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            poem.title,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: context.textSecondaryColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    color: Color(UIConstants.textSecondaryColor),
-                    size: 16,
-                  ),
-                ],
-              ),
-              
-              // 预览部分诗词
-              if (poems.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                const Divider(),
-                const SizedBox(height: 8),
-                ...poems.take(3).map((poem) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.menu_book,
-                        size: 14,
-                        color: Color(UIConstants.textSecondaryColor),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          poem.title,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(UIConstants.textSecondaryColor),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  )),
+                  if (poems.length > 3)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '还有 ${poems.length - 3} 首...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.textSecondaryColor.withValues(alpha: 0.6),
                         ),
                       ),
-                    ],
-                  ),
-                )),
-                if (poems.length > 3)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '还有 ${poems.length - 3} 首...',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: const Color(UIConstants.textSecondaryColor).withOpacity(0.6),
-                      ),
                     ),
-                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -348,22 +323,13 @@ class GroupDetailPage extends StatelessWidget {
     final controller = PoemController.to;
 
     return Scaffold(
-      backgroundColor: const Color(UIConstants.backgroundColor),
+      backgroundColor: context.backgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(UIConstants.backgroundColor),
-        elevation: 0,
-        title: Text(
-          group.name,
-          style: const TextStyle(
-            color: Color(UIConstants.textPrimaryColor),
-            fontFamily: FontConstants.chineseSerif,
-          ),
-        ),
+        title: Text(group.name),
         actions: [
           // 顺序播放按钮
           IconButton(
-            icon: const Icon(Icons.play_circle_outline),
-            color: const Color(UIConstants.accentColor),
+            icon: Icon(Icons.play_circle_outline, color: context.primaryColor),
             tooltip: '顺序播放',
             onPressed: () {
               final poems = _getGroupPoems(controller);
@@ -376,12 +342,10 @@ class GroupDetailPage extends StatelessWidget {
         final poems = _getGroupPoems(controller);
         
         if (poems.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               '该分组暂无诗词',
-              style: TextStyle(
-                color: Color(UIConstants.textSecondaryColor),
-              ),
+              style: TextStyle(color: context.textSecondaryColor),
             ),
           );
         }
@@ -398,7 +362,7 @@ class GroupDetailPage extends StatelessWidget {
                 controller.selectPoem(poem);
                 Get.to(() => const PoemDetailPage());
               },
-              onRemove: () => _showRemoveConfirm(controller, poem),
+              onRemove: () => _showRemoveConfirm(context, controller, poem),
             );
           },
         );
@@ -417,31 +381,18 @@ class GroupDetailPage extends StatelessWidget {
       });
   }
   
-  void _showRemoveConfirm(PoemController controller, Poem poem) {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        title: const Text('移出分组'),
-        content: Text('确定将《${poem.title}》移出当前分组吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              controller.removePoemFromGroup(poem.id!);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('移出'),
-          ),
-        ],
-      ),
-    );
+  void _showRemoveConfirm(BuildContext context, PoemController controller, Poem poem) {
+    AppDialog.confirm(
+      title: '移出分组',
+      message: '确定将《${poem.title}》移出当前分组吗？',
+      confirmText: '移出',
+      cancelText: '取消',
+      confirmColor: Colors.orange,
+    ).then((confirmed) {
+      if (confirmed == true) {
+        controller.removePoemFromGroup(poem.id!);
+      }
+    });
   }
 }
 
@@ -461,71 +412,78 @@ class _GroupPoemItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      color: const Color(UIConstants.cardColor),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        side: const BorderSide(
-          color: Color(UIConstants.dividerColor),
-        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTap,
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: const Color(UIConstants.accentColor).withOpacity(0.1),
-                child: Text(
-                  '${index + 1}',
-                  style: const TextStyle(
-                    color: Color(UIConstants.accentColor),
-                    fontWeight: FontWeight.bold,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: context.primaryColor.withValues(alpha: 0.1),
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      color: context.primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      poem.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontFamily: FontConstants.chineseSerif,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        poem.title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: context.textPrimaryColor,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
-                      style: const TextStyle(
-                        color: Color(UIConstants.textSecondaryColor),
-                        fontSize: 13,
+                      const SizedBox(height: 2),
+                      Text(
+                        '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
+                        style: TextStyle(
+                          color: context.textSecondaryColor,
+                          fontSize: 13,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.remove_circle_outline,
-                  color: Colors.red,
-                  size: 20,
+                IconButton(
+                  icon: Icon(
+                    Icons.remove_circle_outline,
+                    color: context.errorColor,
+                    size: 20,
+                  ),
+                  tooltip: '移出分组',
+                  onPressed: onRemove,
                 ),
-                tooltip: '移出分组',
-                onPressed: onRemove,
-              ),
-              const Icon(
-                Icons.arrow_forward_ios,
-                size: 16,
-                color: Color(UIConstants.textSecondaryColor),
-              ),
-            ],
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: context.textSecondaryColor,
+                ),
+              ],
+            ),
           ),
         ),
       ),

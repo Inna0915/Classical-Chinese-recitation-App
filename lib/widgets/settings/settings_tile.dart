@@ -46,6 +46,12 @@ class SettingsTile extends StatelessWidget {
   
   /// 是否启用
   final bool enabled;
+  
+  /// 自定义右侧组件（当 trailing 为 custom 时使用）
+  final Widget? customTrailing;
+  
+  /// 自定义副标题组件（可选，优先级高于 subtitle）
+  final Widget? subtitleWidget;
 
   const SettingsTile({
     super.key,
@@ -62,6 +68,8 @@ class SettingsTile extends StatelessWidget {
     this.badgeText,
     this.badgeColor,
     this.enabled = true,
+    this.customTrailing,
+    this.subtitleWidget,
   });
 
   @override
@@ -116,7 +124,12 @@ class SettingsTile extends StatelessWidget {
                         height: 1.2,
                       ),
                     ),
-                    if (subtitle != null)
+                    if (subtitleWidget != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: subtitleWidget!,
+                      )
+                    else if (subtitle != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: Text(
@@ -172,6 +185,9 @@ class SettingsTile extends StatelessWidget {
         
       case SettingsTileTrailing.none:
         return const SizedBox.shrink();
+        
+      case SettingsTileTrailing.custom:
+        return customTrailing ?? const SizedBox.shrink();
     }
   }
 
@@ -231,4 +247,7 @@ enum SettingsTileTrailing {
   
   /// 无
   none,
+  
+  /// 自定义组件
+  custom,
 }

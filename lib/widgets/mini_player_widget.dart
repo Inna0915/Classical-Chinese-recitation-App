@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_constants.dart';
+import '../core/theme/app_theme.dart';
 import '../controllers/player_controller.dart';
 import '../controllers/poem_controller.dart';
 import '../models/enums.dart';
@@ -42,14 +43,14 @@ class MiniPlayerWidget extends StatelessWidget {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, -2),
               ),
             ],
             border: Border(
               top: BorderSide(
-                color: const Color(UIConstants.dividerColor),
+                color: context.dividerColor,
                 width: 0.5,
               ),
             ),
@@ -57,7 +58,7 @@ class MiniPlayerWidget extends StatelessWidget {
           child: Row(
             children: [
               // 左侧：意境图/旋转图标
-              _buildLeadingIcon(poem, isPlaying),
+              _buildLeadingIcon(context, poem, isPlaying),
               
               // 中间：诗词信息
               Expanded(
@@ -72,10 +73,10 @@ class MiniPlayerWidget extends StatelessWidget {
                         // 诗词标题
                         Text(
                           poem.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
-                            color: Color(UIConstants.textPrimaryColor),
+                            color: context.textPrimaryColor,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -84,9 +85,9 @@ class MiniPlayerWidget extends StatelessWidget {
                         // 作者信息
                         Text(
                           '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(UIConstants.textSecondaryColor),
+                            color: context.textSecondaryColor,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -98,7 +99,7 @@ class MiniPlayerWidget extends StatelessWidget {
               ),
               
               // 右侧：控制按钮
-              _buildControlButtons(poem, isPlaying, isLoading, controller),
+              _buildControlButtons(context, poem, isPlaying, isLoading, controller),
               
               const SizedBox(width: 8),
             ],
@@ -109,7 +110,7 @@ class MiniPlayerWidget extends StatelessWidget {
   }
 
   /// 左侧意境图/旋转图标
-  Widget _buildLeadingIcon(Poem poem, bool isPlaying) {
+  Widget _buildLeadingIcon(BuildContext context, Poem poem, bool isPlaying) {
     return GestureDetector(
       onTap: () => Get.to(() => const PoemDetailPage()),
       child: Container(
@@ -125,9 +126,9 @@ class MiniPlayerWidget extends StatelessWidget {
               height: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(UIConstants.accentColor).withOpacity(0.1),
+                color: context.primaryColor.withValues(alpha: 0.1),
                 border: Border.all(
-                  color: const Color(UIConstants.accentColor).withOpacity(0.3),
+                  color: context.primaryColor.withValues(alpha: 0.3),
                   width: 2,
                 ),
               ),
@@ -144,6 +145,7 @@ class MiniPlayerWidget extends StatelessWidget {
 
   /// 右侧控制按钮组
   Widget _buildControlButtons(
+    BuildContext context,
     Poem poem,
     bool isPlaying,
     bool isLoading,
@@ -157,9 +159,9 @@ class MiniPlayerWidget extends StatelessWidget {
         
         // 上一首按钮
         IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.skip_previous,
-            color: Color(UIConstants.textSecondaryColor),
+            color: context.textSecondaryColor,
             size: 24,
           ),
           onPressed: () => controller.playPrevious(),
@@ -185,18 +187,18 @@ class MiniPlayerWidget extends StatelessWidget {
                           ? controller.downloadProgress.value
                           : null,
                       strokeWidth: 2,
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(UIConstants.accentColor),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        context.primaryColor,
                       ),
-                      backgroundColor: const Color(UIConstants.dividerColor),
+                      backgroundColor: context.dividerColor,
                     ),
                   ),
                 // 播放按钮
                 Container(
                   width: 36,
                   height: 36,
-                  decoration: const BoxDecoration(
-                    color: Color(UIConstants.accentColor),
+                  decoration: BoxDecoration(
+                    color: context.primaryColor,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -225,9 +227,9 @@ class MiniPlayerWidget extends StatelessWidget {
 
         // 下一首按钮
         IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.skip_next,
-            color: Color(UIConstants.textSecondaryColor),
+            color: context.textSecondaryColor,
             size: 24,
           ),
           onPressed: () => controller.playNext(),
@@ -235,9 +237,9 @@ class MiniPlayerWidget extends StatelessWidget {
         
         // 播放列表按钮
         IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.queue_music,
-            color: Color(UIConstants.textSecondaryColor),
+            color: context.textSecondaryColor,
             size: 24,
           ),
           onPressed: () => _showPlaylistBottomSheet(controller),
@@ -264,9 +266,9 @@ class PlaylistBottomSheet extends StatelessWidget {
     final controller = PlayerController.to;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(UIConstants.cardColor),
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(UIConstants.defaultRadius),
         ),
       ),
@@ -280,7 +282,7 @@ class PlaylistBottomSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(top: 12, bottom: 8),
               decoration: BoxDecoration(
-                color: const Color(UIConstants.dividerColor),
+                color: context.dividerColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -288,18 +290,18 @@ class PlaylistBottomSheet extends StatelessWidget {
             // 标题栏
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: Color(UIConstants.dividerColor),
+                    color: context.dividerColor,
                   ),
                 ),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.queue_music,
-                    color: Color(UIConstants.accentColor),
+                    color: context.primaryColor,
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -313,7 +315,7 @@ class PlaylistBottomSheet extends StatelessWidget {
                   ),
                   
                   // 播放模式切换按钮
-                  _buildPlayModeButton(controller),
+                  _buildPlayModeButton(context, controller),
                   
                   const SizedBox(width: 8),
                   
@@ -334,11 +336,11 @@ class PlaylistBottomSheet extends StatelessWidget {
             Flexible(
               child: Obx(() {
                 if (controller.playlist.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Text(
                       '播放列表为空',
                       style: TextStyle(
-                        color: Color(UIConstants.textSecondaryColor),
+                        color: context.textSecondaryColor,
                       ),
                     ),
                   );
@@ -359,8 +361,12 @@ class PlaylistBottomSheet extends StatelessWidget {
                       isCurrent: isCurrent,
                       isPlaying: isPlaying,
                       onTap: () {
-                        controller.currentIndex.value = index;
-                        controller.playGroup(controller.playlist, index);
+                        // 如果点击的是当前正在播放的项，不做任何操作
+                        if (index == controller.currentIndex.value) {
+                          return;
+                        }
+                        // 切换到指定索引的诗词播放
+                        controller.playAtIndex(index);
                       },
                       onRemove: () => controller.removeFromPlaylist(index),
                     );
@@ -373,18 +379,18 @@ class PlaylistBottomSheet extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(
-                    color: Color(UIConstants.dividerColor),
+                    color: context.dividerColor,
                   ),
                 ),
               ),
               child: ElevatedButton(
                 onPressed: () => Get.back(),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(UIConstants.backgroundColor),
-                  foregroundColor: const Color(UIConstants.textPrimaryColor),
+                  backgroundColor: context.backgroundColor,
+                  foregroundColor: context.textPrimaryColor,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -400,7 +406,7 @@ class PlaylistBottomSheet extends StatelessWidget {
   }
 
   /// 播放模式切换按钮
-  Widget _buildPlayModeButton(PlayerController controller) {
+  Widget _buildPlayModeButton(BuildContext context, PlayerController controller) {
     return Obx(() {
       final mode = controller.playMode.value;
       return TextButton.icon(
@@ -408,7 +414,7 @@ class PlaylistBottomSheet extends StatelessWidget {
         icon: Icon(mode.icon, size: 18),
         label: Text(mode.displayName),
         style: TextButton.styleFrom(
-          foregroundColor: const Color(UIConstants.textSecondaryColor),
+          foregroundColor: context.textSecondaryColor,
         ),
       );
     });
@@ -441,8 +447,8 @@ class _PlaylistItem extends StatelessWidget {
         height: 40,
         decoration: BoxDecoration(
           color: isCurrent
-              ? const Color(UIConstants.accentColor).withOpacity(0.1)
-              : const Color(UIConstants.backgroundColor),
+              ? context.primaryColor.withValues(alpha: 0.1)
+              : context.backgroundColor,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
@@ -452,8 +458,8 @@ class _PlaylistItem extends StatelessWidget {
                   '${index + 1}',
                   style: TextStyle(
                     color: isCurrent
-                        ? const Color(UIConstants.accentColor)
-                        : const Color(UIConstants.textSecondaryColor),
+                        ? context.primaryColor
+                        : context.textSecondaryColor,
                     fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
@@ -464,28 +470,28 @@ class _PlaylistItem extends StatelessWidget {
         style: TextStyle(
           fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
           color: isCurrent
-              ? const Color(UIConstants.accentColor)
-              : const Color(UIConstants.textPrimaryColor),
+              ? context.primaryColor
+              : context.textPrimaryColor,
         ),
       ),
       subtitle: Text(
         '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
-          color: Color(UIConstants.textSecondaryColor),
+          color: context.textSecondaryColor,
         ),
       ),
       trailing: IconButton(
-        icon: const Icon(
+        icon: Icon(
           Icons.close,
           size: 18,
-          color: Color(UIConstants.textSecondaryColor),
+          color: context.textSecondaryColor,
         ),
         onPressed: onRemove,
       ),
       onTap: onTap,
       tileColor: isCurrent
-          ? const Color(UIConstants.accentColor).withOpacity(0.05)
+          ? context.primaryColor.withValues(alpha: 0.05)
           : null,
     );
   }
@@ -501,22 +507,22 @@ class _PlayingIndicator extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildBar(0.4),
+        _buildBar(context, 0.4),
         const SizedBox(width: 2),
-        _buildBar(0.7),
+        _buildBar(context, 0.7),
         const SizedBox(width: 2),
-        _buildBar(0.5),
+        _buildBar(context, 0.5),
       ],
     );
   }
 
-  Widget _buildBar(double heightFactor) {
+  Widget _buildBar(BuildContext context, double heightFactor) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       width: 3,
       height: 16 * heightFactor,
       decoration: BoxDecoration(
-        color: const Color(UIConstants.accentColor),
+        color: context.primaryColor,
         borderRadius: BorderRadius.circular(1.5),
       ),
     );
@@ -536,16 +542,15 @@ class _StaticPoemIcon extends StatelessWidget {
       height: 36,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: const Color(UIConstants.accentColor).withOpacity(0.2),
+        color: context.primaryColor.withValues(alpha: 0.2),
       ),
       child: Center(
         child: Text(
           poem.title.isNotEmpty ? poem.title[0] : '诗',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Color(UIConstants.accentColor),
-            fontFamily: FontConstants.chineseSerif,
+            color: context.primaryColor,
           ),
         ),
       ),
@@ -591,16 +596,15 @@ class _RotatingPoemIconState extends State<_RotatingPoemIcon>
         height: 36,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: const Color(UIConstants.accentColor).withOpacity(0.2),
+          color: context.primaryColor.withValues(alpha: 0.2),
         ),
         child: Center(
           child: Text(
             widget.poem.title.isNotEmpty ? widget.poem.title[0] : '诗',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(UIConstants.accentColor),
-              fontFamily: FontConstants.chineseSerif,
+              color: context.primaryColor,
             ),
           ),
         ),
@@ -624,7 +628,7 @@ class _FavoriteButton extends StatelessWidget {
       return IconButton(
         icon: Icon(
           isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: isFavorite ? Colors.red : const Color(UIConstants.textSecondaryColor),
+          color: isFavorite ? Colors.red : context.textSecondaryColor,
           size: 22,
         ),
         onPressed: () => controller.toggleFavorite(poem.id!),

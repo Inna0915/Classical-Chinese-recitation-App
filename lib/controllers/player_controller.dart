@@ -279,6 +279,14 @@ class PlayerController extends GetxController {
   // ==================== 播放控制 ====================
 
   /// 播放指定索引的诗词
+  /// 播放指定索引的诗词（公共方法，用于播放列表跳转）
+  Future<void> playAtIndex(int index) async {
+    if (index < 0 || index >= playlist.length) return;
+    
+    currentIndex.value = index;
+    await _playAtIndex(index);
+  }
+
   Future<void> _playAtIndex(int index) async {
     if (index < 0 || index >= playlist.length) return;
 

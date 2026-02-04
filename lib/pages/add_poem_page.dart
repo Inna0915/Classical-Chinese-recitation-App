@@ -4,10 +4,12 @@ import '../constants/ai_models.dart';
 import '../constants/ai_prompts.dart';
 import '../constants/app_constants.dart';
 import '../controllers/poem_controller.dart';
+import '../core/theme/app_theme.dart';
 import '../models/poem.dart';
 import '../services/ai_service.dart';
 import '../services/database_helper.dart';
 import '../services/settings_service.dart';
+import '../widgets/dialogs/app_dialog.dart';
 
 /// 添加作品页面
 class AddPoemPage extends StatefulWidget {
@@ -61,8 +63,8 @@ class _AddPoemPageState extends State<AddPoemPage> {
       return;
     }
     
-    // 匹配 朝代 · 作者 格式
-    final dotMatch = RegExp(r'(.+?)\s*[·•]\s*(.+)').firstMatch(str);
+    // 匹配 朝代 · 作者 格式（支持中文点、英文句点）
+    final dotMatch = RegExp(r'(.+?)\s*[·•.]\s*(.+)').firstMatch(str);
     if (dotMatch != null) {
       var dynasty = dotMatch.group(1)!.trim();
       if (dynasty.endsWith('代')) {
@@ -143,13 +145,9 @@ class _AddPoemPageState extends State<AddPoemPage> {
       
       if (mounted) {
         Get.back();
-        Get.snackbar(
-          '成功',
-          '《${poem.title}》已录入书架',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: const Color(UIConstants.accentColor),
-          colorText: Colors.white,
-          margin: const EdgeInsets.all(16),
+        AppDialog.success(
+          title: '录入成功',
+          message: '《${poem.title}》已录入书架',
         );
       }
     } catch (e) {
@@ -218,12 +216,9 @@ class _AddPoemPageState extends State<AddPoemPage> {
       _aiRawResponse = result.content;
     });
 
-    Get.snackbar(
-      '查询成功',
-      '已获取《${_titleController.text}》的内容',
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Colors.green,
-      colorText: Colors.white,
+    AppDialog.success(
+      title: '查询成功',
+      message: '已获取《${_titleController.text}》的内容',
     );
   }
 
@@ -233,15 +228,13 @@ class _AddPoemPageState extends State<AddPoemPage> {
     
     Get.dialog(
       AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         ),
-        title: const Text(
+        title: Text(
           'AI 配置',
           style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
+            color: context.textPrimaryColor,
             fontSize: 18,
           ),
         ),
@@ -254,12 +247,12 @@ class _AddPoemPageState extends State<AddPoemPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 供应商选择
-                const Text(
+                Text(
                   '选择供应商',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
-                    color: Color(UIConstants.textSecondaryColor),
+                    color: context.textSecondaryColor,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -272,7 +265,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
                         : null,
                       value: entry.key,
                       groupValue: settings.aiProvider.value,
-                      activeColor: const Color(UIConstants.accentColor),
+                      activeColor: context.primaryColor,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                       onChanged: (value) {
                         if (value != null) {
@@ -286,12 +279,12 @@ class _AddPoemPageState extends State<AddPoemPage> {
                 const Divider(height: 24),
                 
                 // 模型选择
-                const Text(
+                Text(
                   '选择模型',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
-                    color: Color(UIConstants.textSecondaryColor),
+                    color: context.textSecondaryColor,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -313,18 +306,15 @@ class _AddPoemPageState extends State<AddPoemPage> {
                           title: Text(model, style: const TextStyle(fontSize: 14)),
                           value: model,
                           groupValue: settings.aiModel.value,
-                          activeColor: const Color(UIConstants.accentColor),
+                          activeColor: context.primaryColor,
                           contentPadding: const EdgeInsets.symmetric(horizontal: 8),
                           onChanged: (value) {
                             if (value != null) {
                               settings.saveAIModel(value);
                               Get.back();
-                              Get.snackbar(
-                                '切换成功',
-                                '已切换到模型: $value',
-                                snackPosition: SnackPosition.TOP,
-                                backgroundColor: Colors.green,
-                                colorText: Colors.white,
+                              AppDialog.success(
+                                title: '切换成功',
+                                message: '已切换到模型: $value',
                               );
                             }
                           },
@@ -363,18 +353,16 @@ class _AddPoemPageState extends State<AddPoemPage> {
     
     Get.dialog(
       AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         ),
         title: Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Text(
                 '编辑提示词',
                 style: TextStyle(
-                  fontFamily: FontConstants.chineseSerif,
-                  color: Color(UIConstants.textPrimaryColor),
+                  color: context.textPrimaryColor,
                 ),
               ),
             ),
@@ -410,16 +398,13 @@ class _AddPoemPageState extends State<AddPoemPage> {
             onPressed: () {
               settings.saveCustomPrompt(controller.text.trim());
               Get.back();
-              Get.snackbar(
-                '保存成功',
-                '提示词已更新',
-                snackPosition: SnackPosition.TOP,
-                backgroundColor: Colors.green,
-                colorText: Colors.white,
+              AppDialog.success(
+                title: '保存成功',
+                message: '提示词已更新',
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(UIConstants.accentColor),
+              backgroundColor: context.primaryColor,
             ),
             child: const Text('保存'),
           ),
@@ -434,15 +419,13 @@ class _AddPoemPageState extends State<AddPoemPage> {
     
     Get.dialog(
       AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         ),
-        title: const Text(
+        title: Text(
           '手动输入模型',
           style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
+            color: context.textPrimaryColor,
           ),
         ),
         content: TextField(
@@ -463,17 +446,14 @@ class _AddPoemPageState extends State<AddPoemPage> {
               if (model.isNotEmpty) {
                 settings.saveAIModel(model);
                 Get.back();
-                Get.snackbar(
-                  '切换成功',
-                  '已切换到模型: $model',
-                  snackPosition: SnackPosition.TOP,
-                  backgroundColor: Colors.green,
-                  colorText: Colors.white,
+                AppDialog.success(
+                  title: '切换成功',
+                  message: '已切换到模型: $model',
                 );
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(UIConstants.accentColor),
+              backgroundColor: context.primaryColor,
             ),
             child: const Text('确定'),
           ),
@@ -487,27 +467,21 @@ class _AddPoemPageState extends State<AddPoemPage> {
     final settings = SettingsService.to;
 
     return Scaffold(
-      backgroundColor: const Color(UIConstants.backgroundColor),
       appBar: AppBar(
-        backgroundColor: const Color(UIConstants.backgroundColor),
-        elevation: 0,
         leading: IconButton(
-          icon: const Icon(
+          icon: Icon(
             Icons.arrow_back_ios,
-            color: Color(UIConstants.textPrimaryColor),
+            color: context.textPrimaryColor,
           ),
           onPressed: () => Get.back(),
         ),
         title: const Text(
           '添加作品',
           style: TextStyle(
-            color: Color(UIConstants.textPrimaryColor),
-            fontFamily: FontConstants.chineseSerif,
             fontSize: FontConstants.titleSize,
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
       ),
       body: Column(
         children: [
@@ -518,15 +492,15 @@ class _AddPoemPageState extends State<AddPoemPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   settings.hasAIConfig.value 
-                    ? _buildAIQueryCard() 
-                    : _buildAINotConfigCard(),
+                    ? _buildAIQueryCard(context) 
+                    : _buildAINotConfigCard(context),
                   
                   if (_errorMessage != null) ...[
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
+                        color: Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -553,12 +527,12 @@ class _AddPoemPageState extends State<AddPoemPage> {
                   
                   if (_aiRawResponse != null) ...[
                     const SizedBox(height: 16),
-                    _buildAIResultPreview(),
+                    _buildAIResultPreview(context),
                   ],
                   
                   if (_showManualForm) ...[
                     const SizedBox(height: 24),
-                    _buildManualForm(),
+                    _buildManualForm(context),
                   ],
                   
                   const SizedBox(height: 80),
@@ -571,10 +545,9 @@ class _AddPoemPageState extends State<AddPoemPage> {
             Container(
               padding: const EdgeInsets.all(UIConstants.defaultPadding),
               decoration: BoxDecoration(
-                color: const Color(UIConstants.backgroundColor),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, -5),
                   ),
@@ -587,7 +560,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _savePoem,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(UIConstants.accentColor),
+                      backgroundColor: context.primaryColor,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
@@ -606,7 +579,6 @@ class _AddPoemPageState extends State<AddPoemPage> {
                         : const Text(
                             '保存到书架',
                             style: TextStyle(
-                              fontFamily: FontConstants.chineseSerif,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -621,19 +593,19 @@ class _AddPoemPageState extends State<AddPoemPage> {
   }
 
   /// AI 查询卡片
-  Widget _buildAIQueryCard() {
+  Widget _buildAIQueryCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(UIConstants.accentColor).withOpacity(0.1),
-            const Color(UIConstants.accentColor).withOpacity(0.05),
+            context.primaryColor.withValues(alpha: 0.1),
+            context.primaryColor.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         border: Border.all(
-          color: const Color(UIConstants.accentColor).withOpacity(0.3),
+          color: context.primaryColor.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -641,18 +613,18 @@ class _AddPoemPageState extends State<AddPoemPage> {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.auto_stories,
-                color: Color(UIConstants.accentColor),
+                color: context.primaryColor,
                 size: 20,
               ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
                   '文章查询',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Color(UIConstants.accentColor),
+                    color: context.primaryColor,
                     fontSize: 16,
                   ),
                 ),
@@ -664,7 +636,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(UIConstants.accentColor).withOpacity(0.1),
+                    color: context.primaryColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -672,17 +644,17 @@ class _AddPoemPageState extends State<AddPoemPage> {
                     children: [
                       Obx(() => Text(
                         '${SettingsService.to.aiProvider.value.toUpperCase()} | ${SettingsService.to.aiModel.value.length > 10 ? '${SettingsService.to.aiModel.value.substring(0, 10)}...' : SettingsService.to.aiModel.value}',
-                        style: const TextStyle(
-                          color: Color(UIConstants.accentColor),
+                        style: TextStyle(
+                          color: context.primaryColor,
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                       )),
                       const SizedBox(width: 4),
-                      const Icon(
+                      Icon(
                         Icons.settings,
                         size: 14,
-                        color: Color(UIConstants.accentColor),
+                        color: context.primaryColor,
                       ),
                     ],
                   ),
@@ -694,7 +666,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
           Text(
             '输入作品名称，AI 将为您查询原文、释义和生僻字注音',
             style: TextStyle(
-              color: const Color(UIConstants.textSecondaryColor),
+              color: context.textSecondaryColor,
               fontSize: 13,
             ),
           ),
@@ -705,37 +677,37 @@ class _AddPoemPageState extends State<AddPoemPage> {
             decoration: InputDecoration(
               hintText: '输入作品名称，如：静夜思、水调歌头...',
               hintStyle: TextStyle(
-                color: const Color(UIConstants.textSecondaryColor).withOpacity(0.5),
+                color: context.textSecondaryColor.withValues(alpha: 0.5),
                 fontSize: 14,
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(
-                  color: const Color(UIConstants.accentColor).withOpacity(0.3),
+                  color: context.primaryColor.withValues(alpha: 0.3),
                 ),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(
-                  color: const Color(UIConstants.accentColor).withOpacity(0.3),
+                  color: context.primaryColor.withValues(alpha: 0.3),
                 ),
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(
-                  color: Color(UIConstants.accentColor),
+                borderSide: BorderSide(
+                  color: context.primaryColor,
                 ),
               ),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.5),
+              fillColor: Colors.white.withValues(alpha: 0.5),
               suffixIcon: _isAIGenerating
                   ? Container(
                       width: 20,
                       height: 20,
                       margin: const EdgeInsets.all(14),
-                      child: const CircularProgressIndicator(
+                      child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Color(UIConstants.accentColor),
+                        color: context.primaryColor,
                       ),
                     )
                   : IconButton(
@@ -752,10 +724,10 @@ class _AddPoemPageState extends State<AddPoemPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(UIConstants.accentColor).withOpacity(0.05),
+                color: context.primaryColor.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: const Color(UIConstants.accentColor).withOpacity(0.2),
+                  color: context.primaryColor.withValues(alpha: 0.2),
                 ),
               ),
               child: Row(
@@ -764,13 +736,13 @@ class _AddPoemPageState extends State<AddPoemPage> {
                   Icon(
                     Icons.edit_note,
                     size: 16,
-                    color: const Color(UIConstants.accentColor).withOpacity(0.8),
+                    color: context.primaryColor.withValues(alpha: 0.8),
                   ),
                   const SizedBox(width: 4),
                   Text(
                     '编辑提示词',
                     style: TextStyle(
-                      color: const Color(UIConstants.accentColor).withOpacity(0.8),
+                      color: context.primaryColor.withValues(alpha: 0.8),
                       fontSize: 12,
                     ),
                   ),
@@ -789,7 +761,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
                 ? null 
                 : _queryPoemWithAI,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(UIConstants.accentColor),
+                backgroundColor: context.primaryColor,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -828,14 +800,13 @@ class _AddPoemPageState extends State<AddPoemPage> {
   }
 
   /// AI 结果预览
-  Widget _buildAIResultPreview() {
+  Widget _buildAIResultPreview(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(UIConstants.cardColor),
         borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         border: Border.all(
-          color: const Color(UIConstants.dividerColor),
+          color: context.dividerColor,
         ),
       ),
       child: Column(
@@ -843,17 +814,17 @@ class _AddPoemPageState extends State<AddPoemPage> {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.description_outlined,
                 size: 18,
-                color: Color(UIConstants.accentColor),
+                color: context.primaryColor,
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'AI 查询结果',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(UIConstants.textPrimaryColor),
+                  color: context.textPrimaryColor,
                 ),
               ),
               const Spacer(),
@@ -866,7 +837,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
                 icon: const Icon(Icons.close, size: 16),
                 label: const Text('关闭', style: TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(UIConstants.textSecondaryColor),
+                  foregroundColor: context.textSecondaryColor,
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -879,13 +850,12 @@ class _AddPoemPageState extends State<AddPoemPage> {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: SelectableText(
               _aiRawResponse!,
               style: const TextStyle(
-                fontFamily: FontConstants.chineseSerif,
                 fontSize: 14,
                 height: 1.8,
               ),
@@ -897,7 +867,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
   }
 
   /// 手动录入表单
-  Widget _buildManualForm() {
+  Widget _buildManualForm(BuildContext context) {
     return Form(
       key: _formKey,
       child: Column(
@@ -906,12 +876,12 @@ class _AddPoemPageState extends State<AddPoemPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 '手动录入',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(UIConstants.textPrimaryColor),
+                  color: context.textPrimaryColor,
                 ),
               ),
               TextButton.icon(
@@ -923,7 +893,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
                 icon: const Icon(Icons.expand_less, size: 18),
                 label: const Text('收起', style: TextStyle(fontSize: 12)),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(UIConstants.textSecondaryColor),
+                  foregroundColor: context.textSecondaryColor,
                   padding: EdgeInsets.zero,
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -934,6 +904,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
           const SizedBox(height: 16),
           
           _buildTextField(
+            context: context,
             controller: _titleController,
             label: '作品标题',
             hint: '如：静夜思',
@@ -948,11 +919,12 @@ class _AddPoemPageState extends State<AddPoemPage> {
           
           const SizedBox(height: 16),
           
-          _buildDynastySelector(),
+          _buildDynastySelector(context),
           
           const SizedBox(height: 16),
           
           _buildTextField(
+            context: context,
             controller: _authorController,
             label: '作者',
             hint: '如：李白',
@@ -967,28 +939,28 @@ class _AddPoemPageState extends State<AddPoemPage> {
           
           const SizedBox(height: 16),
           
-          _buildContentField(),
+          _buildContentField(context),
         ],
       ),
     );
   }
 
   /// AI 未配置提示卡片
-  Widget _buildAINotConfigCard() {
+  Widget _buildAINotConfigCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.1),
+        color: Colors.grey.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         border: Border.all(
-          color: Colors.grey.withOpacity(0.3),
+          color: Colors.grey.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
         children: [
           Icon(
             Icons.smart_toy_outlined,
-            color: Colors.grey.withOpacity(0.6),
+            color: Colors.grey.withValues(alpha: 0.6),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -999,14 +971,14 @@ class _AddPoemPageState extends State<AddPoemPage> {
                   'AI 助手未配置',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey.withOpacity(0.8),
+                    color: Colors.grey.withValues(alpha: 0.8),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '前往设置页面配置 AI 模型，即可使用智能查询功能',
                   style: TextStyle(
-                    color: Colors.grey.withOpacity(0.6),
+                    color: Colors.grey.withValues(alpha: 0.6),
                     fontSize: 12,
                   ),
                 ),
@@ -1024,6 +996,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
 
   /// 文本输入框
   Widget _buildTextField({
+    required BuildContext context,
     required TextEditingController controller,
     required String label,
     required String hint,
@@ -1035,8 +1008,8 @@ class _AddPoemPageState extends State<AddPoemPage> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Color(UIConstants.textPrimaryColor),
+          style: TextStyle(
+            color: context.textPrimaryColor,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -1045,35 +1018,35 @@ class _AddPoemPageState extends State<AddPoemPage> {
         TextFormField(
           controller: controller,
           validator: validator,
-          style: const TextStyle(
-            color: Color(UIConstants.textPrimaryColor),
+          style: TextStyle(
+            color: context.textPrimaryColor,
             fontSize: 16,
           ),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(
-              color: const Color(UIConstants.textSecondaryColor).withOpacity(0.5),
+              color: context.textSecondaryColor.withValues(alpha: 0.5),
             ),
             prefixIcon: Icon(
               icon,
-              color: const Color(UIConstants.textSecondaryColor),
+              color: context.textSecondaryColor,
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(UIConstants.dividerColor),
+              borderSide: BorderSide(
+                color: context.dividerColor,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(UIConstants.dividerColor),
+              borderSide: BorderSide(
+                color: context.dividerColor,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(UIConstants.accentColor),
+              borderSide: BorderSide(
+                color: context.primaryColor,
               ),
             ),
             errorBorder: OutlineInputBorder(
@@ -1083,7 +1056,6 @@ class _AddPoemPageState extends State<AddPoemPage> {
               ),
             ),
             filled: true,
-            fillColor: const Color(UIConstants.cardColor),
           ),
         ),
       ],
@@ -1091,14 +1063,14 @@ class _AddPoemPageState extends State<AddPoemPage> {
   }
 
   /// 朝代选择器
-  Widget _buildDynastySelector() {
+  Widget _buildDynastySelector(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '朝代',
           style: TextStyle(
-            color: Color(UIConstants.textPrimaryColor),
+            color: context.textPrimaryColor,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -1112,42 +1084,40 @@ class _AddPoemPageState extends State<AddPoemPage> {
             separatorBuilder: (_, __) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               final dynasty = _dynasties[index];
-              return Obx(() {
-                final isSelected = _dynastyController.text == dynasty;
-                return InkWell(
-                  onTap: () {
-                    setState(() {
-                      _dynastyController.text = dynasty;
-                    });
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
+              final isSelected = _dynastyController.text == dynasty;
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    _dynastyController.text = dynasty;
+                  });
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? context.primaryColor
+                        : context.cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
                       color: isSelected
-                          ? const Color(UIConstants.accentColor)
-                          : const Color(UIConstants.cardColor),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isSelected
-                            ? const Color(UIConstants.accentColor)
-                            : const Color(UIConstants.dividerColor),
-                      ),
-                    ),
-                    child: Text(
-                      dynasty,
-                      style: TextStyle(
-                        color: isSelected
-                            ? Colors.white
-                            : const Color(UIConstants.textPrimaryColor),
-                        fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
+                          ? context.primaryColor
+                          : context.dividerColor,
                     ),
                   ),
-                );
-              });
+                  child: Text(
+                    dynasty,
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : context.textPrimaryColor,
+                      fontSize: 13,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              );
             },
           ),
         ),
@@ -1156,17 +1126,17 @@ class _AddPoemPageState extends State<AddPoemPage> {
   }
 
   /// 内容输入框
-  Widget _buildContentField() {
+  Widget _buildContentField(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               '作品内容',
               style: TextStyle(
-                color: Color(UIConstants.textPrimaryColor),
+                color: context.textPrimaryColor,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -1180,7 +1150,7 @@ class _AddPoemPageState extends State<AddPoemPage> {
               icon: const Icon(Icons.auto_fix_high, size: 16),
               label: const Text('示例填充'),
               style: TextButton.styleFrom(
-                foregroundColor: const Color(UIConstants.accentColor),
+                foregroundColor: context.primaryColor,
                 padding: EdgeInsets.zero,
                 minimumSize: Size.zero,
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -1198,32 +1168,32 @@ class _AddPoemPageState extends State<AddPoemPage> {
             return null;
           },
           maxLines: 8,
-          style: const TextStyle(
-            color: Color(UIConstants.textPrimaryColor),
+          style: TextStyle(
+            color: context.textPrimaryColor,
             fontSize: 16,
             height: 1.8,
           ),
           decoration: InputDecoration(
             hintText: '输入作品内容，建议每句后换行...',
             hintStyle: TextStyle(
-              color: const Color(UIConstants.textSecondaryColor).withOpacity(0.5),
+              color: context.textSecondaryColor.withValues(alpha: 0.5),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(UIConstants.dividerColor),
+              borderSide: BorderSide(
+                color: context.dividerColor,
               ),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(UIConstants.dividerColor),
+              borderSide: BorderSide(
+                color: context.dividerColor,
               ),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(UIConstants.accentColor),
+              borderSide: BorderSide(
+                color: context.primaryColor,
               ),
             ),
             errorBorder: OutlineInputBorder(
@@ -1233,7 +1203,6 @@ class _AddPoemPageState extends State<AddPoemPage> {
               ),
             ),
             filled: true,
-            fillColor: const Color(UIConstants.cardColor),
           ),
         ),
       ],

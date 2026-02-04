@@ -4,6 +4,7 @@ import '../constants/app_constants.dart';
 import '../constants/tts_voices.dart';
 import '../controllers/poem_controller.dart';
 import '../controllers/player_controller.dart';
+import '../core/theme/app_theme.dart';
 import '../services/settings_service.dart';
 import '../services/tts_service.dart';
 import '../widgets/karaoke_text.dart';
@@ -33,20 +34,18 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
     final controller = PoemController.to;
 
     return Scaffold(
-      backgroundColor: const Color(UIConstants.backgroundColor),
       appBar: AppBar(
-        backgroundColor: const Color(UIConstants.backgroundColor),
         elevation: 0,
         title: Obx(() => Text(
           controller.currentPoem.value?.title ?? '',
-          style: const TextStyle(
-            color: Color(UIConstants.textPrimaryColor),
+          style: TextStyle(
+            color: context.textPrimaryColor,
             fontSize: 17,
             fontWeight: FontWeight.w600,
           ),
         )),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Color(UIConstants.textPrimaryColor), size: 20),
+          icon: Icon(Icons.arrow_back_ios, color: context.textPrimaryColor, size: 20),
           onPressed: () => Get.back(),
         ),
         actions: [
@@ -57,7 +56,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
             return IconButton(
               icon: Icon(
                 isFav ? Icons.favorite : Icons.favorite_outline,
-                color: isFav ? const Color(UIConstants.accentColor) : const Color(UIConstants.textSecondaryColor),
+                color: isFav ? context.primaryColor : context.textSecondaryColor,
                 size: 22,
               ),
               onPressed: () => controller.toggleFavorite(poem.id),
@@ -79,16 +78,16 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                 onPageChanged: (index) => _currentPage.value = index,
                 children: [
                   // Page 1: 纯净版
-                  _buildCleanPage(poem),
+                  _buildCleanPage(context, poem),
                   // Page 2: 释义版
-                  _buildAnnotatedPage(poem),
+                  _buildAnnotatedPage(context, poem),
                 ],
               ),
             ),
             // 页面指示器
-            _buildPageIndicator(),
+            _buildPageIndicator(context),
             // 底部播放控制栏
-            _buildPlayerBar(controller),
+            _buildPlayerBar(context, controller),
           ],
         );
       }),
@@ -96,8 +95,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
   }
 
   /// Page 1: 纯净版 - 简洁展示，支持卡拉OK高亮
-  Widget _buildCleanPage(dynamic poem) {
-    final controller = PoemController.to;
+  Widget _buildCleanPage(BuildContext context, dynamic poem) {
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -111,7 +109,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
             ),
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(UIConstants.cardColor),
+              color: context.cardColor,
               borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
             ),
             child: Column(
@@ -119,9 +117,8 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                 // 标题
                 Text(
                   poem.title,
-                  style: const TextStyle(
-                    color: Color(UIConstants.textPrimaryColor),
-                    fontFamily: FontConstants.chineseSerif,
+                  style: TextStyle(
+                    color: context.textPrimaryColor,
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     height: 1.4,
@@ -133,13 +130,13 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(UIConstants.backgroundColor),
+                    color: context.backgroundColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
                     '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
-                    style: const TextStyle(
-                      color: Color(UIConstants.textSecondaryColor),
+                    style: TextStyle(
+                      color: context.textSecondaryColor,
                       fontSize: 14,
                     ),
                   ),
@@ -167,9 +164,8 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                   // 默认静态显示
                   return Text(
                     poem.cleanContent,
-                    style: const TextStyle(
-                      color: Color(UIConstants.textPrimaryColor),
-                      fontFamily: FontConstants.chineseSerif,
+                    style: TextStyle(
+                      color: context.textPrimaryColor,
                       fontSize: 18,
                       height: 2.4,
                       letterSpacing: 1.5,
@@ -187,7 +183,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
   }
 
   /// Page 2: 释义版 - 逐行原文+释义混排
-  Widget _buildAnnotatedPage(dynamic poem) {
+  Widget _buildAnnotatedPage(BuildContext context, dynamic poem) {
     final hasAnnotation = poem.annotatedContent != null && 
                          poem.annotatedContent.toString().isNotEmpty;
     
@@ -202,7 +198,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
             ),
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(UIConstants.cardColor),
+              color: context.cardColor,
               borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
             ),
             child: Column(
@@ -212,9 +208,8 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                 Center(
                   child: Text(
                     poem.title,
-                    style: const TextStyle(
-                      color: Color(UIConstants.textPrimaryColor),
-                      fontFamily: FontConstants.chineseSerif,
+                    style: TextStyle(
+                      color: context.textPrimaryColor,
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       height: 1.4,
@@ -228,28 +223,27 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(UIConstants.backgroundColor),
+                      color: context.backgroundColor,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
-                      style: const TextStyle(
-                        color: Color(UIConstants.textSecondaryColor),
+                      style: TextStyle(
+                        color: context.textSecondaryColor,
                         fontSize: 13,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Divider(height: 1, color: Color(UIConstants.dividerColor)),
+                Divider(height: 1, color: context.dividerColor),
                 const SizedBox(height: 24),
                 // 释义内容 - 逐行原文+释义混排（annotated_content 已包含原文和释义）
                 if (hasAnnotation)
                   Text(
                     poem.annotatedContent,
-                    style: const TextStyle(
-                      color: Color(UIConstants.textPrimaryColor),
-                      fontFamily: FontConstants.chineseSerif,
+                    style: TextStyle(
+                      color: context.textPrimaryColor,
                       fontSize: 16,
                       height: 2.0,
                       letterSpacing: 0.5,
@@ -259,10 +253,10 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     alignment: Alignment.center,
-                    child: const Text(
+                    child: Text(
                       '暂无释义',
                       style: TextStyle(
-                        color: Color(UIConstants.textSecondaryColor),
+                        color: context.textSecondaryColor,
                         fontSize: 14,
                         fontStyle: FontStyle.italic,
                       ),
@@ -278,21 +272,21 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
   }
 
   /// 页面指示器 - 显示当前是第几页
-  Widget _buildPageIndicator() {
+  Widget _buildPageIndicator(BuildContext context) {
     return Obx(() => Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildDot(0),
+          _buildDot(context, 0),
           const SizedBox(width: 8),
-          _buildDot(1),
+          _buildDot(context, 1),
           const SizedBox(width: 12),
           Text(
             _currentPage.value == 0 ? '左滑查看释义' : '右滑返回原文',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Color(UIConstants.textSecondaryColor),
+              color: context.textSecondaryColor,
             ),
           ),
         ],
@@ -300,21 +294,21 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
     ));
   }
 
-  Widget _buildDot(int index) {
+  Widget _buildDot(BuildContext context, int index) {
     final isActive = _currentPage.value == index;
     return Container(
       width: isActive ? 16 : 8,
       height: 8,
       decoration: BoxDecoration(
         color: isActive 
-            ? const Color(UIConstants.accentColor) 
-            : const Color(UIConstants.dividerColor),
+            ? context.primaryColor 
+            : context.dividerColor,
         borderRadius: BorderRadius.circular(4),
       ),
     );
   }
 
-  Widget _buildPlayerBar(PoemController controller) {
+  Widget _buildPlayerBar(BuildContext context, PoemController controller) {
     return Obx(() {
       final playerController = Get.find<PlayerController>();
       final poem = controller.currentPoem.value;
@@ -323,31 +317,60 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
       final isCurrentPoemPlaying = playerController.currentPoem?.id == poem?.id;
       final hasPlayback = playerController.currentPoem != null;
       
-      // 如果没有播放任何内容，或者播放的是其他诗词，简化显示
+      // 如果播放的是其他诗词，显示切换播放按钮
       if (!isCurrentPoemPlaying && hasPlayback) {
         return Container(
           margin: const EdgeInsets.all(16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: const Color(UIConstants.cardColor),
+            color: context.cardColor,
             borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
           ),
           child: SafeArea(
             top: false,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.info_outline,
-                  color: Color(UIConstants.textSecondaryColor),
-                  size: 16,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '正在播放: ${playerController.currentPoem?.title}',
+                        style: TextStyle(
+                          color: context.textSecondaryColor,
+                          fontSize: 12,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '点击右侧按钮切换到当前诗词',
+                        style: TextStyle(
+                          color: context.textSecondaryColor.withValues(alpha: 0.7),
+                          fontSize: 11,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  '正在播放: ${playerController.currentPoem?.title}',
-                  style: const TextStyle(
-                    color: Color(UIConstants.textSecondaryColor),
-                    fontSize: 12,
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // 清空播放列表，只播放当前诗词
+                    if (poem != null) {
+                      playerController.playGroup([poem], 0);
+                    }
+                  },
+                  icon: const Icon(Icons.play_arrow, size: 18),
+                  label: const Text('切换播放'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: context.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ],
@@ -360,7 +383,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
         margin: const EdgeInsets.all(16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(UIConstants.cardColor),
+          color: context.cardColor,
           borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         ),
         child: SafeArea(
@@ -380,14 +403,14 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                     children: [
                       Text(
                         _formatDuration(playerController.position.value),
-                        style: const TextStyle(fontSize: 11, color: Color(UIConstants.textSecondaryColor)),
+                        style: TextStyle(fontSize: 11, color: context.textSecondaryColor),
                       ),
                       Expanded(
                         child: SliderTheme(
                           data: SliderTheme.of(Get.context!).copyWith(
-                            activeTrackColor: const Color(UIConstants.accentColor),
-                            inactiveTrackColor: const Color(UIConstants.dividerColor),
-                            thumbColor: const Color(UIConstants.accentColor),
+                            activeTrackColor: context.primaryColor,
+                            inactiveTrackColor: context.dividerColor,
+                            thumbColor: context.primaryColor,
                             trackHeight: 2,
                             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
                             overlayShape: SliderComponentShape.noOverlay,
@@ -401,7 +424,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                       ),
                       Text(
                         _formatDuration(playerController.duration.value),
-                        style: const TextStyle(fontSize: 11, color: Color(UIConstants.textSecondaryColor)),
+                        style: TextStyle(fontSize: 11, color: context.textSecondaryColor),
                       ),
                     ],
                   ),
@@ -423,13 +446,13 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             '正在合成语音...',
-                            style: TextStyle(fontSize: 12, color: Color(UIConstants.textSecondaryColor)),
+                            style: TextStyle(fontSize: 12, color: context.textSecondaryColor),
                           ),
                           Text(
                             '${(progress * 100).toInt()}%',
-                            style: const TextStyle(fontSize: 12, color: Color(UIConstants.accentColor)),
+                            style: TextStyle(fontSize: 12, color: context.primaryColor),
                           ),
                         ],
                       ),
@@ -438,8 +461,8 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                         borderRadius: BorderRadius.circular(2),
                         child: LinearProgressIndicator(
                           value: progress > 0 ? progress : null,
-                          backgroundColor: const Color(UIConstants.dividerColor),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Color(UIConstants.accentColor)),
+                          backgroundColor: context.dividerColor,
+                          valueColor: AlwaysStoppedAnimation<Color>(context.primaryColor),
                           minHeight: 3,
                         ),
                       ),
@@ -459,7 +482,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                       return const SizedBox(width: 48);
                     }
                     return IconButton(
-                      icon: const Icon(Icons.stop, color: Color(UIConstants.textSecondaryColor), size: 24),
+                      icon: Icon(Icons.stop, color: context.textSecondaryColor, size: 24),
                       onPressed: () => playerController.stop(),
                     );
                   }),
@@ -478,18 +501,18 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                         height: 64,
                         decoration: BoxDecoration(
                           color: isLoading 
-                              ? const Color(UIConstants.dividerColor) 
-                              : const Color(UIConstants.accentColor),
+                              ? context.dividerColor 
+                              : context.primaryColor,
                           shape: BoxShape.circle,
                         ),
                         child: Center(
                           child: isLoading
-                              ? const SizedBox(
+                              ? SizedBox(
                                   width: 24,
                                   height: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Color(UIConstants.textSecondaryColor)),
+                                    valueColor: AlwaysStoppedAnimation<Color>(context.textSecondaryColor),
                                   ),
                                 )
                               : Icon(
@@ -511,8 +534,8 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                         .firstWhereOrNull((v) => v.voiceType == settings.voiceType.value);
                     return IconButton(
                       icon: const Icon(Icons.record_voice_over, size: 22),
-                      color: const Color(UIConstants.accentColor),
-                      onPressed: () => _showVoiceSelector(controller),
+                      color: context.primaryColor,
+                      onPressed: () => _showVoiceSelector(context, controller),
                       tooltip: voice?.displayName ?? '选择音色',
                     );
                   }),
@@ -528,9 +551,9 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                     .firstWhereOrNull((v) => v.voiceType == settings.voiceType.value);
                 return Text(
                   voice?.displayName ?? settings.voiceType.value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12, 
-                    color: Color(UIConstants.textSecondaryColor),
+                    color: context.textSecondaryColor,
                   ),
                 );
               }),
@@ -546,15 +569,14 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
     return '${twoDigits(duration.inMinutes)}:${twoDigits(duration.inSeconds.remainder(60))}';
   }
 
-  void _showVoiceSelector(PoemController controller) {
-    final settings = SettingsService.to;
+  void _showVoiceSelector(BuildContext context, PoemController controller) {
     final poem = controller.currentPoem.value;
     if (poem == null) return;
 
     showModalBottomSheet(
       context: Get.context!,
-      backgroundColor: const Color(UIConstants.cardColor),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(UIConstants.defaultRadius))),
+      backgroundColor: context.cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(UIConstants.defaultRadius))),
       isScrollControlled: true,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.7,
@@ -566,12 +588,12 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Color(UIConstants.dividerColor))),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: context.dividerColor)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.record_voice_over, color: Color(UIConstants.accentColor), size: 20),
+                    Icon(Icons.record_voice_over, color: context.primaryColor, size: 20),
                     const SizedBox(width: 8),
                     const Expanded(
                       child: Text(
@@ -592,8 +614,8 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                 child: ListView(
                   controller: scrollController,
                   children: [
-                    _buildVoiceSection('Doubao 1.0', TtsVoice1.voices, poem.id),
-                    _buildVoiceSection('Doubao 2.0', TtsVoice2.voices, poem.id),
+                    _buildVoiceSection(context, 'Doubao 1.0', TtsVoice1.voices, poem.id),
+                    _buildVoiceSection(context, 'Doubao 2.0', TtsVoice2.voices, poem.id),
                   ],
                 ),
               ),
@@ -604,7 +626,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
     );
   }
 
-  Widget _buildVoiceSection(String title, List<TtsVoice> voices, int poemId) {
+  Widget _buildVoiceSection(BuildContext context, String title, List<TtsVoice> voices, int poemId) {
     final settings = SettingsService.to;
     final ttsService = TtsService();
 
@@ -618,7 +640,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: const Color(UIConstants.textSecondaryColor),
+              color: context.textSecondaryColor,
             ),
           ),
         ),
@@ -636,13 +658,13 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(UIConstants.backgroundColor) : null,
+                    color: isSelected ? context.backgroundColor : null,
                   ),
                   child: Row(
                     children: [
                       Icon(
                         isSelected ? Icons.check_circle : Icons.circle_outlined,
-                        color: isSelected ? const Color(UIConstants.accentColor) : const Color(UIConstants.dividerColor),
+                        color: isSelected ? context.primaryColor : context.dividerColor,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
@@ -655,19 +677,19 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                color: const Color(UIConstants.textPrimaryColor),
+                                color: context.textPrimaryColor,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               '${voice.gender} · ${voice.description}',
-                              style: const TextStyle(fontSize: 12, color: Color(UIConstants.textSecondaryColor)),
+                              style: TextStyle(fontSize: 12, color: context.textSecondaryColor),
                             ),
                           ],
                         ),
                       ),
                       if (isCached)
-                        const Icon(Icons.offline_pin, color: Color(UIConstants.accentColor), size: 18),
+                        Icon(Icons.offline_pin, color: context.primaryColor, size: 18),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -679,7 +701,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                           voice is TtsVoice1 ? '1.0' : '2.0',
                           style: TextStyle(
                             fontSize: 10,
-                            color: voice is TtsVoice1 ? const Color(UIConstants.textSecondaryColor) : const Color(0xFF4CAF50),
+                            color: voice is TtsVoice1 ? context.textSecondaryColor : const Color(0xFF4CAF50),
                           ),
                         ),
                       ),

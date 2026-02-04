@@ -2,9 +2,9 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../constants/app_constants.dart';
 import '../controllers/poem_controller.dart';
 import '../controllers/player_controller.dart';
+import '../core/theme/app_theme.dart';
 import '../services/update_service.dart';
 import '../widgets/mini_player_widget.dart';
 import 'poem_list_page.dart';
@@ -63,10 +63,10 @@ class _MainPageState extends State<MainPage> {
               // 底部导航栏
               Container(
                 decoration: BoxDecoration(
-                  color: const Color(UIConstants.cardColor),
+                  color: context.cardColor,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, -5),
                     ),
@@ -98,7 +98,7 @@ class _MainPageState extends State<MainPage> {
                           label: '分组',
                         ),
                         // 设置按钮
-                        _buildSettingsButton(),
+                        _buildSettingsButton(context),
                       ],
                     ),
                   ),
@@ -125,7 +125,7 @@ class _MainPageState extends State<MainPage> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           decoration: BoxDecoration(
             color: isActive
-                ? const Color(UIConstants.accentColor).withOpacity(0.1)
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
@@ -135,8 +135,8 @@ class _MainPageState extends State<MainPage> {
               Icon(
                 isActive ? activeIcon : icon,
                 color: isActive
-                    ? const Color(UIConstants.accentColor)
-                    : const Color(UIConstants.textSecondaryColor),
+                    ? Theme.of(context).colorScheme.primary
+                    : context.textSecondaryColor,
                 size: 24,
               ),
               const SizedBox(height: 4),
@@ -144,8 +144,8 @@ class _MainPageState extends State<MainPage> {
                 label,
                 style: TextStyle(
                   color: isActive
-                      ? const Color(UIConstants.accentColor)
-                      : const Color(UIConstants.textSecondaryColor),
+                      ? Theme.of(context).colorScheme.primary
+                      : context.textSecondaryColor,
                   fontSize: 12,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
                 ),
@@ -158,7 +158,7 @@ class _MainPageState extends State<MainPage> {
   }
 
   /// 设置按钮
-  Widget _buildSettingsButton() {
+  Widget _buildSettingsButton(BuildContext context) {
     return GestureDetector(
       onTap: () => Get.to(() => const SettingsPage()),
       child: Container(
@@ -167,19 +167,19 @@ class _MainPageState extends State<MainPage> {
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.settings_outlined,
-              color: Color(UIConstants.textSecondaryColor),
+              color: context.textSecondaryColor,
               size: 24,
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
               '设置',
               style: TextStyle(
-                color: Color(UIConstants.textSecondaryColor),
+                color: context.textSecondaryColor,
                 fontSize: 12,
                 fontWeight: FontWeight.normal,
               ),

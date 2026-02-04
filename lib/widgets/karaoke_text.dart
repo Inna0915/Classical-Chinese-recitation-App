@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../constants/app_constants.dart';
+import '../core/theme/app_theme.dart';
 import '../models/tts_result.dart';
 
 /// 卡拉 OK 风格文本组件 - 逐字高亮
@@ -53,16 +53,16 @@ class KaraokeText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final normalStyle = TextStyle(
-      color: normalColor ?? const Color(UIConstants.textPrimaryColor),
-      fontFamily: fontFamily ?? FontConstants.chineseSerif,
+      color: normalColor ?? context.textPrimaryColor,
+      fontFamily: fontFamily,
       fontSize: fontSize,
       height: height,
       letterSpacing: letterSpacing,
     );
     
     final highlightStyle = TextStyle(
-      color: highlightColor ?? const Color(UIConstants.accentColor),
-      fontFamily: fontFamily ?? FontConstants.chineseSerif,
+      color: highlightColor ?? context.primaryColor,
+      fontFamily: fontFamily,
       fontSize: fontSize * 1.15,
       height: height / 1.15,
       letterSpacing: letterSpacing,
@@ -227,19 +227,19 @@ class SmoothKaraokeText extends StatelessWidget {
       // 颜色插值：已读字 -> 当前字 -> 未读字
       Color color;
       if (isActive) {
-        color = highlightColor ?? const Color(UIConstants.accentColor);
+        color = highlightColor ?? context.primaryColor;
       } else if (wasActive) {
         // 已读的字可以用稍微淡一点的颜色，或者用原色
-        color = normalColor ?? const Color(UIConstants.textPrimaryColor);
+        color = normalColor ?? context.textPrimaryColor;
       } else {
-        color = normalColor ?? const Color(UIConstants.textPrimaryColor);
+        color = normalColor ?? context.textPrimaryColor;
       }
       
       spans.add(TextSpan(
         text: char,
         style: TextStyle(
           color: color,
-          fontFamily: fontFamily ?? FontConstants.chineseSerif,
+          fontFamily: fontFamily,
           fontSize: isActive ? fontSize * 1.1 : fontSize,
           height: isActive ? height / 1.1 : height,
           letterSpacing: letterSpacing,
@@ -335,9 +335,9 @@ class SimpleKaraokeText extends StatelessWidget {
         text: char,
         style: TextStyle(
           color: isHighlight 
-              ? (highlightColor ?? const Color(UIConstants.accentColor))
-              : (normalColor ?? const Color(UIConstants.textPrimaryColor)),
-          fontFamily: fontFamily ?? FontConstants.chineseSerif,
+              ? (highlightColor ?? context.primaryColor)
+              : (normalColor ?? context.textPrimaryColor),
+          fontFamily: fontFamily,
           fontSize: isHighlight ? fontSize * 1.15 : fontSize,
           height: height,
           letterSpacing: letterSpacing,

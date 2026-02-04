@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../constants/ai_models.dart';
-import '../constants/app_constants.dart';
+
 import '../constants/changelog.dart';
 import '../constants/tts_voices.dart';
 import '../controllers/poem_controller.dart';
+import '../core/theme/app_theme.dart';
 import '../services/settings_service.dart';
 import '../services/update_service.dart';
+import '../widgets/dialogs/app_dialog.dart';
 import '../widgets/settings/index.dart';
 import 'settings/llm_config_page.dart';
 import 'settings/tts_config_page.dart';
@@ -48,9 +50,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5), // 极淡灰色背景
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
         centerTitle: true,
         title: const Text(
@@ -114,6 +114,38 @@ class _SettingsPageState extends State<SettingsPage> {
     return Obx(() => SettingsSection(
       title: '外观与显示',
       children: [
+        // 主题颜色选择
+        SettingsTile(
+          icon: Icons.palette_outlined,
+          iconBackgroundColor: const Color(0xFFFCE4EC), // 淡粉色背景
+          iconColor: const Color(0xFFE91E63),
+          title: '主题颜色',
+          subtitle: TraditionalChineseColors.getColorName(settingsService.primaryColor.value),
+          trailing: SettingsTileTrailing.custom,
+          customTrailing: Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: settingsService.primaryColor.value,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+            ),
+          ),
+          onTap: () => _showColorPicker(),
+        ),
+        
+        // 深色模式选择
+        SettingsTile(
+          icon: Icons.dark_mode_outlined,
+          iconBackgroundColor: const Color(0xFFE8EAF6), // 淡靛蓝色背景
+          iconColor: const Color(0xFF3F51B5),
+          title: '深色模式',
+          subtitle: _getThemeModeText(settingsService.themeMode.value),
+          trailing: SettingsTileTrailing.arrow,
+          onTap: () => _showThemeModePicker(),
+        ),
+        
+        // 系统字体切换
         SettingsTile(
           icon: Icons.text_format,
           iconBackgroundColor: const Color(0xFFFFF3E0), // 淡橙色背景
@@ -130,6 +162,184 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ],
     ));
+  }
+  
+  /// 获取主题模式显示文本
+  String _getThemeModeText(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return '跟随系统';
+      case ThemeMode.light:
+        return '浅色模式';
+      case ThemeMode.dark:
+        return '深色模式';
+    }
+  }
+  
+  /// 显示颜色选择器
+  void _showColorPicker() {
+    final colors = TraditionalChineseColors.allColors;
+    final names = ['朱砂', '竹青', '黛蓝', '栀子', '暮山紫', '玄青'];
+    
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 拖动条
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  color: context.dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '选择主题颜色',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: context.textPrimaryColor,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // 颜色选项
+              Wrap(
+                spacing: 20,
+                runSpacing: 20,
+                alignment: WrapAlignment.center,
+                children: List.generate(colors.length, (index) {
+                  final color = colors[index];
+                  final name = names[index];
+                  final isSelected = settingsService.primaryColor.value == color;
+                  
+                  return GestureDetector(
+                    onTap: () {
+                      settingsService.savePrimaryColor(color);
+                      Get.back();
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(28),
+                            border: isSelected
+                                ? Border.all(color: context.textPrimaryColor, width: 3)
+                                : null,
+                            boxShadow: [
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: isSelected
+                              ? const Icon(Icons.check, color: Colors.white, size: 28)
+                              : null,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          name,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isSelected ? color : context.textSecondaryColor,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 32),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  /// 显示深色模式选择器
+  void _showThemeModePicker() {
+    final modes = [ThemeMode.system, ThemeMode.light, ThemeMode.dark];
+    final names = ['跟随系统', '浅色模式', '深色模式'];
+    final icons = [Icons.brightness_auto, Icons.brightness_high, Icons.brightness_2];
+    
+    Get.bottomSheet(
+      Container(
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 拖动条
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  color: context.dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '深色模式',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: context.textPrimaryColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // 模式选项
+              ...List.generate(modes.length, (index) {
+                final mode = modes[index];
+                final isSelected = settingsService.themeMode.value == mode;
+                
+                return ListTile(
+                  leading: Icon(
+                    icons[index],
+                    color: isSelected ? context.primaryColor : context.textSecondaryColor,
+                  ),
+                  title: Text(
+                    names[index],
+                    style: TextStyle(
+                      color: context.textPrimaryColor,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? Icon(Icons.check, color: context.primaryColor)
+                      : null,
+                  onTap: () {
+                    settingsService.saveThemeMode(mode);
+                    Get.back();
+                  },
+                );
+              }),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   /// Voice & Playback 分组
@@ -172,9 +382,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _showAboutDialog() {
     Get.to(() => Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
         centerTitle: true,
         title: const Text('关于'),
@@ -190,7 +398,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: const Color(UIConstants.accentColor),
+                    color: context.primaryColor,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Icon(
@@ -212,7 +420,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   '版本 v$_version',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.grey[600],
+                    color: context.textSecondaryColor,
                   ),
                 ),
               ],
@@ -254,9 +462,9 @@ class _SettingsPageState extends State<SettingsPage> {
           const SizedBox(height: 16),
           
           // 作者信息
-          SettingsSection(
+          const SettingsSection(
             children: [
-              const SettingsTile(
+              SettingsTile(
                 icon: Icons.person_outline,
                 iconBackgroundColor: Color(0xFFFCE4EC),
                 iconColor: Color(0xFFE91E63),
@@ -275,7 +483,7 @@ class _SettingsPageState extends State<SettingsPage> {
               '© 2026 阅读 @Wong · 给宝贝儿子桐桐',
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[400],
+                color: context.textSecondaryColor.withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -285,26 +493,20 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showVersionDetail(VersionInfo version) {
-    Get.dialog(
-      AlertDialog(
-        title: Text('${version.version} 更新内容'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: version.changes.map((change) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text('• $change'),
-            )).toList(),
-          ),
+    AppDialog.show(
+      title: '${version.version} 更新内容',
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: version.changes.map((change) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text('• $change', textAlign: TextAlign.center),
+          )).toList(),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('关闭'),
-          ),
-        ],
       ),
+      confirmText: '关闭',
+      showCancel: false,
     );
   }
 }

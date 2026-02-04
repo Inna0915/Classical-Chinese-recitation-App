@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/poem.dart';
 import '../models/poem_group.dart';
 import '../models/tts_result.dart';
+import '../widgets/dialogs/app_dialog.dart';
 import 'player_controller.dart';
 
 // 导出 TimestampItem 供 UI 使用
@@ -87,6 +88,17 @@ class PoemController extends GetxController {
   
   /// 当前播放的时间戳数据（用于卡拉OK高亮）
   final RxList<TimestampItem> currentTimestamps = <TimestampItem>[].obs;
+  
+  // ==================== 搜索相关 ====================
+  
+  /// 搜索关键词
+  final RxString searchText = ''.obs;
+  
+  /// 显示用的诗词列表（已过滤）
+  final RxList<Poem> displayPoems = <Poem>[].obs;
+  
+  /// 所有原始诗词数据
+  final RxList<Poem> allPoems = <Poem>[].obs;
 
   // ==================== 初始化 ====================
 
@@ -179,24 +191,58 @@ class PoemController extends GetxController {
     try {
       final list = await _db.getAllPoems();
       poems.value = list;
+      allPoems.value = list;
+      // 初始化显示列表
+      _applyFilter();
     } catch (e) {
       errorMessage.value = '加载数据失败: $e';
       print('加载诗词失败: $e');
     }
   }
 
-  /// 搜索诗词
-  Future<void> searchPoems(String keyword) async {
-    try {
-      if (keyword.isEmpty) {
-        await loadPoems();
-        return;
-      }
-      final list = await _db.searchPoems(keyword);
-      poems.value = list;
-    } catch (e) {
-      errorMessage.value = '搜索失败: $e';
+  /// 搜索诗词（实时过滤，带 debounce）
+  void searchPoems(String keyword) {
+    searchText.value = keyword;
+    _applyFilter();
+  }
+  
+  /// 应用搜索和分组过滤
+  void _applyFilter() {
+    var filtered = allPoems.toList();
+    
+    // 1. 先应用分组过滤
+    if (selectedGroupId.value != -1) {
+      filtered = filtered.where((p) => p.groupId == selectedGroupId.value).toList();
     }
+    
+    // 2. 再应用搜索过滤
+    final keyword = searchText.value.trim().toLowerCase();
+    if (keyword.isNotEmpty) {
+      filtered = filtered.where((poem) {
+        final titleMatch = poem.title.toLowerCase().contains(keyword);
+        final authorMatch = poem.author.toLowerCase().contains(keyword);
+        final contentMatch = poem.content.toLowerCase().contains(keyword);
+        return titleMatch || authorMatch || contentMatch;
+      }).toList();
+    }
+    
+    // 3. 按创建时间倒序排序
+    filtered.sort((a, b) {
+      final aTime = a.createdAt ?? DateTime(2000);
+      final bTime = b.createdAt ?? DateTime(2000);
+      return bTime.compareTo(aTime);
+    });
+    
+    displayPoems.value = filtered;
+  }
+  
+  /// 获取过滤后的诗词列表
+  List<Poem> get filteredPoems {
+    // 如果显示列表为空，返回原始列表（兼容旧代码）
+    if (displayPoems.isEmpty && allPoems.isNotEmpty) {
+      return poems;
+    }
+    return displayPoems;
   }
 
   /// 选择当前诗词
@@ -223,23 +269,7 @@ class PoemController extends GetxController {
   /// 选择分组并筛选诗词
   void selectGroup(int? groupId) {
     selectedGroupId.value = groupId ?? -1;
-  }
-
-  /// 根据选中分组返回筛选后的诗词（按创建时间倒序）
-  List<Poem> get filteredPoems {
-    List<Poem> result;
-    if (selectedGroupId.value == -1) {
-      result = poems.toList();
-    } else {
-      result = poems.where((p) => p.groupId == selectedGroupId.value).toList();
-    }
-    // 按创建时间倒序排序，新添加的在前
-    result.sort((a, b) {
-      final aTime = a.createdAt ?? DateTime(2000);
-      final bTime = b.createdAt ?? DateTime(2000);
-      return bTime.compareTo(aTime);
-    });
-    return result;
+    _applyFilter(); // 应用过滤
   }
 
   /// 添加新分组
@@ -329,6 +359,7 @@ class PoemController extends GetxController {
     try {
       await _db.updatePoemGroup(poemId, groupId);
       await loadPoems();
+      await loadGroups();
       
       // 如果当前诗词是被移动的，也更新它
       if (currentPoem.value?.id == poemId) {
@@ -357,12 +388,7 @@ class PoemController extends GetxController {
         }
       }
       
-      Get.snackbar(
-        newStatus ? '已收藏' : '取消收藏',
-        newStatus ? '诗词已添加到收藏夹' : '诗词已从收藏夹移除',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 1),
-      );
+      // 收藏状态已切换，不显示弹窗
     } catch (e) {
       errorMessage.value = '切换收藏状态失败: $e';
     }
@@ -610,10 +636,9 @@ class PoemController extends GetxController {
   /// 按分组顺序播放 - 使用 PlayerController
   Future<void> playGroupInOrder(List<Poem> poems) async {
     if (poems.isEmpty) {
-      Get.snackbar(
-        '提示',
-        '该分组没有诗词',
-        snackPosition: SnackPosition.BOTTOM,
+      AppDialog.info(
+        title: '提示',
+        message: '该分组没有诗词',
       );
       return;
     }
@@ -635,24 +660,19 @@ class PoemController extends GetxController {
       // 更新数据库
       await _db.updatePoemGroup(poemId, null);
       
-      // 更新内存状态
-      final index = poems.indexWhere((p) => p.id == poemId);
-      if (index != -1) {
-        poems[index] = poem.copyWith(groupId: null);
-        poems.refresh();
-      }
+      // 重新加载数据确保界面刷新
+      await loadPoems();
+      await loadGroups();
       
-      Get.snackbar(
-        '成功',
-        '已从分组中移除',
-        snackPosition: SnackPosition.BOTTOM,
+      AppDialog.success(
+        title: '移出成功',
+        message: '已从分组中移除',
       );
     } catch (e) {
       debugPrint('移除分组失败: $e');
-      Get.snackbar(
-        '错误',
-        '移除失败: $e',
-        snackPosition: SnackPosition.BOTTOM,
+      AppDialog.info(
+        title: '移除失败',
+        message: '移除失败: $e',
       );
     }
   }
