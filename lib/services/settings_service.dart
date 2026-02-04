@@ -1,8 +1,11 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants/ai_models.dart';
 import '../constants/app_constants.dart';
 import '../constants/tts_voices.dart';
+import '../models/config/llm_config.dart';
 
 /// 设置服务 - 管理应用配置
 class SettingsService extends GetxService {
@@ -22,6 +25,7 @@ class SettingsService extends GetxService {
   static const String _keyAIApiUrl = 'ai_api_url';
   static const String _keyAIModel = 'ai_model';
   static const String _keyCustomPrompt = 'custom_prompt';
+  static const String _keyLlmConfig = 'llm_config'; // 新的多服务商配置
   
   // ==================== 外观 Observable 配置项 ====================
   /// 是否使用系统字体
@@ -44,6 +48,10 @@ class SettingsService extends GetxService {
   final RxString aiModel = ''.obs;
   final RxString customPrompt = ''.obs;
   final RxBool hasAIConfig = false.obs;
+  
+  // ==================== 新的多服务商 LLM 配置 ====================
+  /// 全局 LLM 配置（多服务商）
+  final Rx<GlobalLlmConfig> llmConfig = GlobalLlmConfig().obs;
   
   /// 获取当前字体
   String? get currentFontFamily => useSystemFont.value ? null : FontConstants.chineseSerif;
@@ -101,6 +109,49 @@ class SettingsService extends GetxService {
         aiApiUrl.value = provider.apiUrl;
       }
     }
+    
+    // 加载新的多服务商 LLM 配置
+    _loadLlmConfig();
+  }
+  
+  /// 加载多服务商 LLM 配置
+  void _loadLlmConfig() {
+    final configJson = _prefs.getString(_keyLlmConfig);
+    if (configJson != null) {
+      try {
+        final configMap = jsonDecode(configJson) as Map<String, dynamic>;
+        llmConfig.value = GlobalLlmConfig.fromJson(configMap);
+      } catch (e) {
+        debugPrint('加载 LLM 配置失败: $e');
+        _initDefaultLlmConfig();
+      }
+    } else {
+      // 从旧配置迁移
+      _initDefaultLlmConfig();
+    }
+  }
+  
+  /// 初始化默认 LLM 配置（迁移旧配置）
+  void _initDefaultLlmConfig() {
+    final config = GlobalLlmConfig(
+      activeProvider: LlmProviderType.kimi,
+    );
+    
+    // 迁移 Kimi 配置
+    final kimiConfig = config.getProviderConfig(LlmProviderType.kimi);
+    kimiConfig.apiKey = 'sk-ChamvmW4vYwSPXwuXOa1ViZuU4TgHMFOJxNRkFfvXm5aJ2F2';
+    kimiConfig.baseUrl = 'https://api.moonshot.cn/v1';
+    kimiConfig.currentModel = 'kimi-k2-turbo-preview';
+    kimiConfig.isEnabled = true;
+    
+    llmConfig.value = config;
+    _saveLlmConfig();
+  }
+  
+  /// 保存 LLM 配置到本地
+  Future<void> _saveLlmConfig() async {
+    final configJson = jsonEncode(llmConfig.value.toJson());
+    await _prefs.setString(_keyLlmConfig, configJson);
   }
 
   // ==================== 外观配置方法 ====================
@@ -231,6 +282,34 @@ class SettingsService extends GetxService {
     await _prefs.setString(_keyAIApiKey, aiApiKey.value);
     await _prefs.setString(_keyAIApiUrl, aiApiUrl.value);
     await _prefs.setString(_keyAIModel, aiModel.value);
+  }
+
+  // ==================== 新的多服务商 LLM 配置方法 ====================
+  
+  /// 获取指定服务商的配置
+  LlmProviderConfig getLlmProviderConfig(LlmProviderType type) {
+    return llmConfig.value.getProviderConfig(type);
+  }
+  
+  /// 保存服务商配置
+  Future<void> saveLlmProviderConfig(LlmProviderType type, LlmProviderConfig config) async {
+    llmConfig.value.setProviderConfig(type, config);
+    await _saveLlmConfig();
+  }
+  
+  /// 设置当前活跃的服务商
+  Future<void> setActiveLlmProvider(LlmProviderType type) async {
+    llmConfig.value.activeProvider = type;
+    await _saveLlmConfig();
+    
+    // 同步更新旧配置（兼容）
+    aiProvider.value = type.name;
+    final config = llmConfig.value.getProviderConfig(type);
+    aiApiKey.value = config.apiKey;
+    aiApiUrl.value = config.baseUrl;
+    aiModel.value = config.currentModel;
+    customPrompt.value = config.systemPrompt;
+    hasAIConfig.value = config.isEnabled && config.apiKey.isNotEmpty;
   }
 
   // ==================== 清除配置 ====================

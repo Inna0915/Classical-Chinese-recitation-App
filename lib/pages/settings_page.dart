@@ -201,7 +201,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 16),
                 const Text(
-                  '古韵诵读',
+                  '阅读',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -262,7 +262,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 iconColor: Color(0xFFE91E63),
                 title: '作者',
                 trailing: SettingsTileTrailing.text,
-                trailingText: 'wong',
+                trailingText: 'Wong',
               ),
             ],
           ),
@@ -272,7 +272,7 @@ class _SettingsPageState extends State<SettingsPage> {
           // 版权信息
           Center(
             child: Text(
-              '© 2025 古韵诵读 · 给宝贝儿子桐桐',
+              '© 2026 阅读 @Wong · 给宝贝儿子桐桐',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[400],
