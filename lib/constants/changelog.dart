@@ -1,9 +1,25 @@
 /// 应用更新记录
 class Changelog {
-  static const String currentVersion = 'v1.6.0';
+  static const String currentVersion = 'v1.7.0';
   static const String currentDate = '2026-02-04';
   
   static const List<VersionInfo> versions = [
+    VersionInfo(
+      version: 'v1.7.0',
+      date: '2026-02-04',
+      changes: [
+        '✨ 新增全局主题系统，支持 6 种中国传统色（朱砂/竹青/黛蓝/栀子/暮山紫/玄青）',
+        '✨ 新增深色模式支持（跟随系统/浅色/深色三档切换）',
+        '✨ 书架页新增固定搜索栏，支持实时搜索（标题/作者/内容）',
+        '✨ 收藏页新增搜索功能，与书架页风格统一',
+        '✨ 新增通用弹窗组件 AppDialog，统一全应用弹窗风格',
+        '🔧 重构书架页和收藏页布局，视觉风格统一',
+        '🔧 诗词列表项组件化，复用性提升',
+        '🐛 修复添加作品界面朝代选择器报错',
+        '🐛 修复播放列表跳转错误问题',
+        '🐛 修复弹窗确定按钮无法点击问题',
+      ],
+    ),
     VersionInfo(
       version: 'v1.6.0',
       date: '2026-02-04',
