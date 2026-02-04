@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../constants/app_constants.dart';
 import '../constants/tts_voices.dart';
 import '../controllers/poem_controller.dart';
+import '../controllers/player_controller.dart';
 import '../services/settings_service.dart';
 import '../services/tts_service.dart';
 import '../widgets/karaoke_text.dart';
@@ -146,16 +147,17 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                 const SizedBox(height: 32),
                 // 正文 - 使用 Obx 监听播放进度和时间戳
                 Obx(() {
-                  final hasTimestamps = controller.currentTimestamps.isNotEmpty;
-                  final isPlayingOrPaused = controller.playbackState.value == PlaybackState.playing || 
-                                           controller.playbackState.value == PlaybackState.paused;
+                  final playerController = Get.find<PlayerController>();
+                  final hasTimestamps = playerController.currentTimestamps.isNotEmpty;
+                  final isPlayingOrPaused = playerController.playbackState.value == PlaybackState.playing || 
+                                           playerController.playbackState.value == PlaybackState.paused;
                   
                   // 只有在播放/暂停状态且有时间戳时才显示卡拉OK效果
                   if (isPlayingOrPaused && hasTimestamps) {
                     return SmoothKaraokeText(
                       text: poem.cleanContent,
-                      timestamps: controller.currentTimestamps,
-                      currentPosition: controller.position.value,
+                      timestamps: playerController.currentTimestamps,
+                      currentPosition: playerController.position.value,
                       fontSize: 18,
                       height: 2.4,
                       letterSpacing: 1.5,
@@ -313,188 +315,230 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
   }
 
   Widget _buildPlayerBar(PoemController controller) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(UIConstants.cardColor),
-        borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 播放进度条（仅在播放或暂停时显示）
-            Obx(() {
-              final state = controller.playbackState.value;
-              if (state == PlaybackState.idle || state == PlaybackState.loading) {
-                return const SizedBox.shrink();
-              }
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  children: [
-                    Text(
-                      _formatDuration(controller.position.value),
-                      style: const TextStyle(fontSize: 11, color: Color(UIConstants.textSecondaryColor)),
-                    ),
-                    Expanded(
-                      child: SliderTheme(
-                        data: SliderTheme.of(Get.context!).copyWith(
-                          activeTrackColor: const Color(UIConstants.accentColor),
-                          inactiveTrackColor: const Color(UIConstants.dividerColor),
-                          thumbColor: const Color(UIConstants.accentColor),
-                          trackHeight: 2,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
-                          overlayShape: SliderComponentShape.noOverlay,
-                        ),
-                        child: Slider(
-                          value: controller.position.value.inMilliseconds.toDouble(),
-                          max: controller.duration.value.inMilliseconds.toDouble().clamp(1, double.infinity),
-                          onChanged: (value) => controller.seekTo(Duration(milliseconds: value.toInt())),
-                        ),
-                      ),
-                    ),
-                    Text(
-                      _formatDuration(controller.duration.value),
-                      style: const TextStyle(fontSize: 11, color: Color(UIConstants.textSecondaryColor)),
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-            // 加载进度条（仅在加载时显示）
-            Obx(() {
-              final state = controller.playbackState.value;
-              final progress = controller.downloadProgress.value;
-              if (state != PlaybackState.loading) {
-                return const SizedBox.shrink();
-              }
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          '正在合成语音...',
-                          style: TextStyle(fontSize: 12, color: Color(UIConstants.textSecondaryColor)),
-                        ),
-                        Text(
-                          '${(progress * 100).toInt()}%',
-                          style: const TextStyle(fontSize: 12, color: Color(UIConstants.accentColor)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: LinearProgressIndicator(
-                        value: progress > 0 ? progress : null,
-                        backgroundColor: const Color(UIConstants.dividerColor),
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(UIConstants.accentColor)),
-                        minHeight: 3,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-            // 控制按钮行
-            Row(
+    return Obx(() {
+      final playerController = Get.find<PlayerController>();
+      final poem = controller.currentPoem.value;
+      
+      // 只有当当前诗词在播放中，或者没有播放时才显示控制栏
+      final isCurrentPoemPlaying = playerController.currentPoem?.id == poem?.id;
+      final hasPlayback = playerController.currentPoem != null;
+      
+      // 如果没有播放任何内容，或者播放的是其他诗词，简化显示
+      if (!isCurrentPoemPlaying && hasPlayback) {
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(UIConstants.cardColor),
+            borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // 停止按钮
-                Obx(() {
-                  final state = controller.playbackState.value;
-                  if (state != PlaybackState.playing && state != PlaybackState.paused) {
-                    return const SizedBox(width: 48);
-                  }
-                  return IconButton(
-                    icon: const Icon(Icons.stop, color: Color(UIConstants.textSecondaryColor), size: 24),
-                    onPressed: () => controller.stop(),
-                  );
-                }),
-                
-                const SizedBox(width: 24),
-                
-                // 播放/暂停按钮
-                Obx(() {
-                  final state = controller.playbackState.value;
-                  final isLoading = state == PlaybackState.loading;
-                  
-                  return GestureDetector(
-                    onTap: isLoading ? null : () => controller.togglePlay(),
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: isLoading 
-                            ? const Color(UIConstants.dividerColor) 
-                            : const Color(UIConstants.accentColor),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Color(UIConstants.textSecondaryColor)),
-                                ),
-                              )
-                            : Icon(
-                                state == PlaybackState.playing ? Icons.pause : Icons.play_arrow,
-                                color: Colors.white,
-                                size: 32,
-                              ),
-                      ),
-                    ),
-                  );
-                }),
-                
-                const SizedBox(width: 24),
-                
-                // 音色选择按钮
-                Obx(() {
-                  final settings = SettingsService.to;
-                  final voice = TtsVoices.getAllVoices()
-                      .firstWhereOrNull((v) => v.voiceType == settings.voiceType.value);
-                  return IconButton(
-                    icon: const Icon(Icons.record_voice_over, size: 22),
-                    color: const Color(UIConstants.accentColor),
-                    onPressed: () => _showVoiceSelector(controller),
-                    tooltip: voice?.displayName ?? '选择音色',
-                  );
-                }),
+                const Icon(
+                  Icons.info_outline,
+                  color: Color(UIConstants.textSecondaryColor),
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '正在播放: ${playerController.currentPoem?.title}',
+                  style: const TextStyle(
+                    color: Color(UIConstants.textSecondaryColor),
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
-            
-            const SizedBox(height: 8),
-            
-            // 音色名称
-            Obx(() {
-              final settings = SettingsService.to;
-              final voice = TtsVoices.getAllVoices()
-                  .firstWhereOrNull((v) => v.voiceType == settings.voiceType.value);
-              return Text(
-                voice?.displayName ?? settings.voiceType.value,
-                style: const TextStyle(
-                  fontSize: 12, 
-                  color: Color(UIConstants.textSecondaryColor),
-                ),
-              );
-            }),
-          ],
+          ),
+        );
+      }
+      
+      return Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(UIConstants.cardColor),
+          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         ),
-      ),
-    );
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 播放进度条（仅在播放或暂停时显示）
+              Obx(() {
+                final state = playerController.playbackState.value;
+                if (state == PlaybackState.idle || state == PlaybackState.loading) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    children: [
+                      Text(
+                        _formatDuration(playerController.position.value),
+                        style: const TextStyle(fontSize: 11, color: Color(UIConstants.textSecondaryColor)),
+                      ),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderTheme.of(Get.context!).copyWith(
+                            activeTrackColor: const Color(UIConstants.accentColor),
+                            inactiveTrackColor: const Color(UIConstants.dividerColor),
+                            thumbColor: const Color(UIConstants.accentColor),
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 4),
+                            overlayShape: SliderComponentShape.noOverlay,
+                          ),
+                          child: Slider(
+                            value: playerController.position.value.inMilliseconds.toDouble(),
+                            max: playerController.duration.value.inMilliseconds.toDouble().clamp(1, double.infinity),
+                            onChanged: (value) => playerController.seekTo(Duration(milliseconds: value.toInt())),
+                          ),
+                        ),
+                      ),
+                      Text(
+                        _formatDuration(playerController.duration.value),
+                        style: const TextStyle(fontSize: 11, color: Color(UIConstants.textSecondaryColor)),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              // 加载进度条（仅在加载时显示）
+              Obx(() {
+                final state = playerController.playbackState.value;
+                final progress = playerController.downloadProgress.value;
+                if (state != PlaybackState.loading) {
+                  return const SizedBox.shrink();
+                }
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            '正在合成语音...',
+                            style: TextStyle(fontSize: 12, color: Color(UIConstants.textSecondaryColor)),
+                          ),
+                          Text(
+                            '${(progress * 100).toInt()}%',
+                            style: const TextStyle(fontSize: 12, color: Color(UIConstants.accentColor)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: LinearProgressIndicator(
+                          value: progress > 0 ? progress : null,
+                          backgroundColor: const Color(UIConstants.dividerColor),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Color(UIConstants.accentColor)),
+                          minHeight: 3,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+
+              // 控制按钮行
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // 停止按钮
+                  Obx(() {
+                    final state = playerController.playbackState.value;
+                    if (state != PlaybackState.playing && state != PlaybackState.paused) {
+                      return const SizedBox(width: 48);
+                    }
+                    return IconButton(
+                      icon: const Icon(Icons.stop, color: Color(UIConstants.textSecondaryColor), size: 24),
+                      onPressed: () => playerController.stop(),
+                    );
+                  }),
+                  
+                  const SizedBox(width: 24),
+                  
+                  // 播放/暂停按钮
+                  Obx(() {
+                    final state = playerController.playbackState.value;
+                    final isLoading = state == PlaybackState.loading;
+                    
+                    return GestureDetector(
+                      onTap: isLoading ? null : () => controller.togglePlay(),
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: isLoading 
+                              ? const Color(UIConstants.dividerColor) 
+                              : const Color(UIConstants.accentColor),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: isLoading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Color(UIConstants.textSecondaryColor)),
+                                  ),
+                                )
+                              : Icon(
+                                  state == PlaybackState.playing ? Icons.pause : Icons.play_arrow,
+                                  color: Colors.white,
+                                  size: 32,
+                                ),
+                        ),
+                      ),
+                    );
+                  }),
+                  
+                  const SizedBox(width: 24),
+                  
+                  // 音色选择按钮
+                  Obx(() {
+                    final settings = SettingsService.to;
+                    final voice = TtsVoices.getAllVoices()
+                        .firstWhereOrNull((v) => v.voiceType == settings.voiceType.value);
+                    return IconButton(
+                      icon: const Icon(Icons.record_voice_over, size: 22),
+                      color: const Color(UIConstants.accentColor),
+                      onPressed: () => _showVoiceSelector(controller),
+                      tooltip: voice?.displayName ?? '选择音色',
+                    );
+                  }),
+                ],
+              ),
+              
+              const SizedBox(height: 8),
+              
+              // 音色名称
+              Obx(() {
+                final settings = SettingsService.to;
+                final voice = TtsVoices.getAllVoices()
+                    .firstWhereOrNull((v) => v.voiceType == settings.voiceType.value);
+                return Text(
+                  voice?.displayName ?? settings.voiceType.value,
+                  style: const TextStyle(
+                    fontSize: 12, 
+                    color: Color(UIConstants.textSecondaryColor),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   String _formatDuration(Duration duration) {

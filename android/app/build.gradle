@@ -33,16 +33,16 @@ android {
         }
     }
     
-    // 自定义 APK 输出文件名格式: app-yymmdd-hhmm.apk
-    android.applicationVariants.all { variant ->
-        variant.outputs.all { output ->
+    // 自定义 APK 输出文件名格式: guyun-release-yymmdd-hhmm.apk
+    applicationVariants.configureEach { variant ->
+        variant.outputs.configureEach { output ->
             def date = new Date()
             def formattedDate = date.format('yyMMdd-HHmm')
-            outputFileName = "app-${formattedDate}.apk"
+            outputFileName = "guyun-release-${formattedDate}.apk"
         }
     }
     
-    lintOptions {
+    lint {
         checkReleaseBuilds false
         abortOnError false
     }

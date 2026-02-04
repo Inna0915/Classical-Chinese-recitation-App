@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_constants.dart';
 import '../controllers/poem_controller.dart';
+import '../controllers/player_controller.dart';
 import '../services/update_service.dart';
 import '../widgets/mini_player_widget.dart';
 import 'poem_list_page.dart';
@@ -23,6 +24,8 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
+    // 初始化 PlayerController
+    Get.put(PlayerController());
     // Android 平台启动后延迟检查更新
     if (!kIsWeb && Platform.isAndroid) {
       _checkUpdateOnStartup();
@@ -30,20 +33,12 @@ class _MainPageState extends State<MainPage> {
   }
 
   /// 启动时检查更新
-  Future<void> _checkUpdateOnStartup() async {
+  void _checkUpdateOnStartup() {
     // 等待页面渲染完成
-    await Future.delayed(const Duration(seconds: 2));
-    
-    // 检查是否应该自动检查（距离上次超过 24 小时）
-    final shouldCheck = await UpdateService.shouldAutoCheck();
-    if (!shouldCheck) return;
-    
-    // 静默检查更新
-    final updateInfo = await UpdateService.checkUpdate();
-    if (updateInfo != null && mounted) {
-      // 发现更新，显示对话框
-      UpdateService.showUpdateDialog(updateInfo);
-    }
+    Future.delayed(const Duration(seconds: 3), () {
+      // 静默检查更新
+      UpdateService.to.checkUpdate(isManual: false);
+    });
   }
 
   @override

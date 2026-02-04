@@ -9,6 +9,7 @@ import '../constants/tts_voices.dart';
 import '../controllers/poem_controller.dart';
 import '../services/settings_service.dart';
 import '../services/tts_service.dart';
+import '../services/update_service.dart';
 
 /// 设置页面
 class SettingsPage extends StatefulWidget {
@@ -603,6 +604,34 @@ class _SettingsPageState extends State<SettingsPage> {
               'wong · 给宝贝儿子桐桐',
               style: TextStyle(fontSize: 12),
             ),
+          ),
+          
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          
+          // 检查更新
+          ListTile(
+            leading: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: const Color(UIConstants.accentColor),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.system_update,
+                color: Colors.white,
+                size: 16,
+              ),
+            ),
+            title: const Text('检查更新'),
+            subtitle: Obx(() => Text(
+              UpdateService.to.isChecking.value 
+                  ? '检查中...' 
+                  : '点击检查最新版本',
+              style: const TextStyle(fontSize: 12),
+            )),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+            onTap: () => UpdateService.to.checkUpdate(isManual: true),
           ),
           
           const Divider(height: 1, indent: 16, endIndent: 16),

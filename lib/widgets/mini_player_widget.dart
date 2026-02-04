@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../constants/app_constants.dart';
+import '../controllers/player_controller.dart';
 import '../controllers/poem_controller.dart';
+import '../models/enums.dart';
 import '../models/poem.dart';
 import '../pages/poem_detail_page.dart';
 
@@ -12,10 +14,10 @@ class MiniPlayerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = PoemController.to;
+    final controller = PlayerController.to;
 
     return Obx(() {
-      final poem = controller.currentPoem.value;
+      final poem = controller.currentPoemRx.value;
       final isPlaying = controller.playbackState.value == PlaybackState.playing;
       final isLoading = controller.playbackState.value == PlaybackState.loading;
       
@@ -24,72 +26,83 @@ class MiniPlayerWidget extends StatelessWidget {
         return const SizedBox.shrink();
       }
 
-      return Container(
-        height: 64,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, -2),
-            ),
-          ],
-          border: Border(
-            top: BorderSide(
-              color: const Color(UIConstants.dividerColor),
-              width: 0.5,
+      // 手势检测：左右滑动切换上一首/下一首
+      return GestureDetector(
+        onHorizontalDragEnd: (details) {
+          // 左滑 -> 下一首，右滑 -> 上一首
+          if (details.primaryVelocity! < -100) {
+            controller.playNext();
+          } else if (details.primaryVelocity! > 100) {
+            controller.playPrevious();
+          }
+        },
+        child: Container(
+          height: 64,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 4,
+                offset: const Offset(0, -2),
+              ),
+            ],
+            border: Border(
+              top: BorderSide(
+                color: const Color(UIConstants.dividerColor),
+                width: 0.5,
+              ),
             ),
           ),
-        ),
-        child: Row(
-          children: [
-            // 左侧：意境图/旋转唱片
-            _buildLeadingIcon(poem, isPlaying),
-            
-            // 中间：诗词信息
-            Expanded(
-              child: GestureDetector(
-                onTap: () => Get.to(() => const PoemDetailPage()),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 诗词标题
-                      Text(
-                        poem.title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: Color(UIConstants.textPrimaryColor),
+          child: Row(
+            children: [
+              // 左侧：意境图/旋转图标
+              _buildLeadingIcon(poem, isPlaying),
+              
+              // 中间：诗词信息
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => Get.to(() => const PoemDetailPage()),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 诗词标题
+                        Text(
+                          poem.title,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Color(UIConstants.textPrimaryColor),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      // 作者信息
-                      Text(
-                        '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(UIConstants.textSecondaryColor),
+                        const SizedBox(height: 4),
+                        // 作者信息
+                        Text(
+                          '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(UIConstants.textSecondaryColor),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            
-            // 右侧：控制按钮
-            _buildControlButtons(poem, isPlaying, isLoading, controller),
-            
-            const SizedBox(width: 8),
-          ],
+              
+              // 右侧：控制按钮
+              _buildControlButtons(poem, isPlaying, isLoading, controller),
+              
+              const SizedBox(width: 8),
+            ],
+          ),
         ),
       );
     });
@@ -106,7 +119,7 @@ class MiniPlayerWidget extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            // 外圈装饰（模拟黑胶唱片）
+            // 外圈装饰
             Container(
               width: 48,
               height: 48,
@@ -120,13 +133,9 @@ class MiniPlayerWidget extends StatelessWidget {
               ),
             ),
             // 旋转的内容
-            AnimatedContainer(
-              duration: const Duration(seconds: 10),
-              curve: Curves.linear,
-              child: isPlaying
-                  ? _RotatingPoemIcon(poem: poem)
-                  : _StaticPoemIcon(poem: poem),
-            ),
+            isPlaying
+                ? _RotatingPoemIcon(poem: poem)
+                : _StaticPoemIcon(poem: poem),
           ],
         ),
       ),
@@ -138,26 +147,24 @@ class MiniPlayerWidget extends StatelessWidget {
     Poem poem,
     bool isPlaying,
     bool isLoading,
-    PoemController controller,
+    PlayerController controller,
   ) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         // 收藏按钮
-        Obx(() {
-          final isFavorite = controller.isFavorite(poem.id);
-          return IconButton(
-            icon: Icon(
-              isFavorite ? Icons.favorite : Icons.favorite_border,
-              color: isFavorite
-                  ? const Color(UIConstants.accentColor)
-                  : const Color(UIConstants.textSecondaryColor),
-              size: 22,
-            ),
-            onPressed: () => controller.toggleFavorite(poem.id),
-          );
-        }),
+        _FavoriteButton(poem: poem),
         
+        // 上一首按钮
+        IconButton(
+          icon: const Icon(
+            Icons.skip_previous,
+            color: Color(UIConstants.textSecondaryColor),
+            size: 24,
+          ),
+          onPressed: () => controller.playPrevious(),
+        ),
+
         // 播放/暂停按钮（带进度环）
         GestureDetector(
           onTap: isLoading ? null : () => controller.togglePlay(),
@@ -215,6 +222,16 @@ class MiniPlayerWidget extends StatelessWidget {
             ),
           ),
         ),
+
+        // 下一首按钮
+        IconButton(
+          icon: const Icon(
+            Icons.skip_next,
+            color: Color(UIConstants.textSecondaryColor),
+            size: 24,
+          ),
+          onPressed: () => controller.playNext(),
+        ),
         
         // 播放列表按钮
         IconButton(
@@ -230,120 +247,223 @@ class MiniPlayerWidget extends StatelessWidget {
   }
 
   /// 显示播放列表 BottomSheet
-  void _showPlaylistBottomSheet(PoemController controller) {
+  void _showPlaylistBottomSheet(PlayerController controller) {
     Get.bottomSheet(
-      Container(
-        decoration: const BoxDecoration(
-          color: Color(UIConstants.cardColor),
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(UIConstants.defaultRadius),
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 标题栏
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Color(UIConstants.dividerColor),
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.queue_music,
-                      color: Color(UIConstants.accentColor),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        '当前播放',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: () => controller.stop(),
-                      icon: const Icon(Icons.clear_all, size: 18),
-                      label: const Text('清空'),
-                    ),
-                  ],
-                ),
-              ),
-              
-              // 当前播放的诗词
-              if (controller.currentPoem.value != null)
-                _buildPlaylistItem(
-                  controller.currentPoem.value!,
-                  isPlaying: true,
-                  onTap: () => Get.back(),
-                ),
-              
-              const Divider(height: 1),
-              
-              // 提示：暂无播放列表功能（当前只支持单首播放）
-              Container(
-                padding: const EdgeInsets.all(24),
-                alignment: Alignment.center,
-                child: const Text(
-                  '当前仅支持单首播放\n连续播放功能即将上线',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(UIConstants.textSecondaryColor),
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      const PlaylistBottomSheet(),
       isScrollControlled: true,
     );
   }
+}
 
-  /// 播放列表项
-  Widget _buildPlaylistItem(
-    Poem poem, {
-    required bool isPlaying,
-    required VoidCallback onTap,
-  }) {
+/// 播放列表 BottomSheet
+class PlaylistBottomSheet extends StatelessWidget {
+  const PlaylistBottomSheet({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = PlayerController.to;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(UIConstants.cardColor),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(UIConstants.defaultRadius),
+        ),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 拖动指示条
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              decoration: BoxDecoration(
+                color: const Color(UIConstants.dividerColor),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // 标题栏
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Color(UIConstants.dividerColor),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.queue_music,
+                    color: Color(UIConstants.accentColor),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Obx(() => Text(
+                      '当前播放 (${controller.playlist.length}首)',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )),
+                  ),
+                  
+                  // 播放模式切换按钮
+                  _buildPlayModeButton(controller),
+                  
+                  const SizedBox(width: 8),
+                  
+                  // 清空按钮
+                  TextButton.icon(
+                    onPressed: () {
+                      controller.clearPlaylist();
+                      Get.back();
+                    },
+                    icon: const Icon(Icons.clear_all, size: 18),
+                    label: const Text('清空'),
+                  ),
+                ],
+              ),
+            ),
+            
+            // 播放列表
+            Flexible(
+              child: Obx(() {
+                if (controller.playlist.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      '播放列表为空',
+                      style: TextStyle(
+                        color: Color(UIConstants.textSecondaryColor),
+                      ),
+                    ),
+                  );
+                }
+                
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: controller.playlist.length,
+                  itemBuilder: (context, index) {
+                    final poem = controller.playlist[index];
+                    final isCurrent = index == controller.currentIndex.value;
+                    final isPlaying = isCurrent && 
+                        controller.playbackState.value == PlaybackState.playing;
+                    
+                    return _PlaylistItem(
+                      poem: poem,
+                      index: index,
+                      isCurrent: isCurrent,
+                      isPlaying: isPlaying,
+                      onTap: () {
+                        controller.currentIndex.value = index;
+                        controller.playGroup(controller.playlist, index);
+                      },
+                      onRemove: () => controller.removeFromPlaylist(index),
+                    );
+                  },
+                );
+              }),
+            ),
+            
+            // 关闭按钮
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(
+                    color: Color(UIConstants.dividerColor),
+                  ),
+                ),
+              ),
+              child: ElevatedButton(
+                onPressed: () => Get.back(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(UIConstants.backgroundColor),
+                  foregroundColor: const Color(UIConstants.textPrimaryColor),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('关闭'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 播放模式切换按钮
+  Widget _buildPlayModeButton(PlayerController controller) {
+    return Obx(() {
+      final mode = controller.playMode.value;
+      return TextButton.icon(
+        onPressed: () => controller.togglePlayMode(),
+        icon: Icon(mode.icon, size: 18),
+        label: Text(mode.displayName),
+        style: TextButton.styleFrom(
+          foregroundColor: const Color(UIConstants.textSecondaryColor),
+        ),
+      );
+    });
+  }
+}
+
+/// 播放列表项
+class _PlaylistItem extends StatelessWidget {
+  final Poem poem;
+  final int index;
+  final bool isCurrent;
+  final bool isPlaying;
+  final VoidCallback onTap;
+  final VoidCallback onRemove;
+
+  const _PlaylistItem({
+    required this.poem,
+    required this.index,
+    required this.isCurrent,
+    required this.isPlaying,
+    required this.onTap,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return ListTile(
       leading: Container(
         width: 40,
         height: 40,
         decoration: BoxDecoration(
-          color: isPlaying
+          color: isCurrent
               ? const Color(UIConstants.accentColor).withOpacity(0.1)
               : const Color(UIConstants.backgroundColor),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
           child: isPlaying
-              ? const Icon(
-                  Icons.volume_up,
-                  color: Color(UIConstants.accentColor),
-                  size: 20,
-                )
-              : const Icon(
-                  Icons.music_note,
-                  color: Color(UIConstants.textSecondaryColor),
-                  size: 20,
+              ? const _PlayingIndicator()
+              : Text(
+                  '${index + 1}',
+                  style: TextStyle(
+                    color: isCurrent
+                        ? const Color(UIConstants.accentColor)
+                        : const Color(UIConstants.textSecondaryColor),
+                    fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                  ),
                 ),
         ),
       ),
       title: Text(
         poem.title,
         style: TextStyle(
-          fontWeight: isPlaying ? FontWeight.bold : FontWeight.normal,
-          color: isPlaying
+          fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+          color: isCurrent
               ? const Color(UIConstants.accentColor)
               : const Color(UIConstants.textPrimaryColor),
         ),
@@ -355,17 +475,50 @@ class MiniPlayerWidget extends StatelessWidget {
           color: Color(UIConstants.textSecondaryColor),
         ),
       ),
-      trailing: isPlaying
-          ? const Icon(
-              Icons.equalizer,
-              color: Color(UIConstants.accentColor),
-              size: 20,
-            )
-          : null,
+      trailing: IconButton(
+        icon: const Icon(
+          Icons.close,
+          size: 18,
+          color: Color(UIConstants.textSecondaryColor),
+        ),
+        onPressed: onRemove,
+      ),
       onTap: onTap,
-      tileColor: isPlaying
+      tileColor: isCurrent
           ? const Color(UIConstants.accentColor).withOpacity(0.05)
           : null,
+    );
+  }
+}
+
+/// 正在播放指示器（波纹动画）
+class _PlayingIndicator extends StatelessWidget {
+  const _PlayingIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildBar(0.4),
+        const SizedBox(width: 2),
+        _buildBar(0.7),
+        const SizedBox(width: 2),
+        _buildBar(0.5),
+      ],
+    );
+  }
+
+  Widget _buildBar(double heightFactor) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      width: 3,
+      height: 16 * heightFactor,
+      decoration: BoxDecoration(
+        color: const Color(UIConstants.accentColor),
+        borderRadius: BorderRadius.circular(1.5),
+      ),
     );
   }
 }
@@ -453,5 +606,29 @@ class _RotatingPoemIconState extends State<_RotatingPoemIcon>
         ),
       ),
     );
+  }
+}
+
+/// 收藏按钮
+class _FavoriteButton extends StatelessWidget {
+  final Poem poem;
+
+  const _FavoriteButton({required this.poem});
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = Get.find<PoemController>();
+    
+    return Obx(() {
+      final isFavorite = controller.isFavorite(poem.id!);
+      return IconButton(
+        icon: Icon(
+          isFavorite ? Icons.favorite : Icons.favorite_border,
+          color: isFavorite ? Colors.red : const Color(UIConstants.textSecondaryColor),
+          size: 22,
+        ),
+        onPressed: () => controller.toggleFavorite(poem.id!),
+      );
+    });
   }
 }

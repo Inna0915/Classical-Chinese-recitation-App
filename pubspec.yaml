@@ -3,7 +3,7 @@ description: 古韵诵读 - AI 朗读古诗词应用
 
 publish_to: 'none'
 
-version: 1.4.0+5
+version: 1.5.0+6
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -38,6 +38,7 @@ dependencies:
   # 更新检查相关
   package_info_plus: ^8.0.0      # 获取应用版本号
   open_filex: ^4.3.4             # 打开 APK 安装文件
+  pub_semver: ^2.1.4             # 版本号比较
 
 dev_dependencies:
   flutter_test:

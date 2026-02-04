@@ -111,20 +111,21 @@ class _PoemListPageState extends State<PoemListPage> {
 
   Widget _buildGroupSelector(PoemController controller) {
     return Container(
-      height: 52,
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      height: 40,
+      margin: const EdgeInsets.only(top: 4, bottom: 8),
       child: Obx(() {
         final List<Widget> chips = [];
         
-        // 全部
+        // 全部（仅添加一次）
         chips.add(_buildGroupChip(
           label: '全部',
           isSelected: controller.selectedGroupId.value == -1,
           onTap: () => controller.selectGroup(-1),
         ));
         
-        // 分组
+        // 分组（过滤掉名为"全部"的分组，避免重复）
         for (final group in controller.groups) {
+          if (group.name == '全部') continue; // 跳过名为"全部"的分组
           chips.add(_buildGroupChip(
             label: group.name,
             isSelected: controller.selectedGroupId.value == group.id,
@@ -150,22 +151,32 @@ class _PoemListPageState extends State<PoemListPage> {
     required VoidCallback onTap,
     VoidCallback? onLongPress,
   }) {
+    // 限制标签长度，最多显示6个字符
+    String displayLabel = label;
+    if (label.length > 6) {
+      displayLabel = '${label.substring(0, 5)}...';
+    }
+    
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        constraints: const BoxConstraints(maxWidth: 80),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? const Color(UIConstants.accentColor) : const Color(UIConstants.cardColor),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
-          label,
+          displayLabel,
           style: TextStyle(
             color: isSelected ? Colors.white : const Color(UIConstants.textPrimaryColor),
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -460,6 +471,8 @@ class _PoemListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final controller = Get.find<PoemController>();
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -470,7 +483,7 @@ class _PoemListItem extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
               Expanded(
@@ -496,9 +509,26 @@ class _PoemListItem extends StatelessWidget {
                   ],
                 ),
               ),
+              // 收藏按钮（放在最右侧按钮旁边）
+              Obx(() {
+                final isFavorite = controller.isFavorite(poem.id!);
+                return IconButton(
+                  icon: Icon(
+                    isFavorite ? Icons.favorite : Icons.favorite_border,
+                    color: isFavorite ? Colors.red : const Color(UIConstants.textSecondaryColor),
+                    size: 20,
+                  ),
+                  onPressed: () => controller.toggleFavorite(poem.id!),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                );
+              }),
+              const SizedBox(width: 4),
               IconButton(
                 icon: const Icon(Icons.more_vert, color: Color(UIConstants.textSecondaryColor)),
                 onPressed: onMorePressed,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
               ),
             ],
           ),

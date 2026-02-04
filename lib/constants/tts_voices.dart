@@ -43,78 +43,71 @@ class TtsVoice1 implements TtsVoice {
   static const List<TtsVoice1> voices = [
     // 默认音色
     TtsVoice1(
-      voiceType: 'zh_female_qingxinnvsheng_mars_bigtts',
-      displayName: '清新女声',
-      gender: 'female',
-      description: '清新自然的女声，适合古诗朗读',
-    ),
-    TtsVoice1(
-      voiceType: 'ICL_zh_female_wenrounvshen_239eff5e8ffa_tob',
-      displayName: '温柔女声',
-      gender: 'female',
-      description: '温柔婉约的女声',
-    ),
-    TtsVoice1(
-      voiceType: 'zh_male_lengkugege_emo_v2_mars_bigtts',
-      displayName: '冷酷哥哥',
+      voiceType: 'ICL_zh_male_neiliancaijun_e991be511569_tob',
+      displayName: '内敛才俊',
       gender: 'male',
-      description: '清朗阳光的男声，适合古诗朗读',
+      description: '内敛才俊男声(指令遵循)',
     ),
     TtsVoice1(
-      voiceType: 'zh_female_shuangkuaisisi_emo_v2_mars_bigtts',
-      displayName: '爽快思思',
+      voiceType: 'ICL_zh_male_yangyang_v1_tob',
+      displayName: '温暖少年',
       gender: 'male',
-      description: '沉稳有力的男声',
-    ),
-    // 扩展音色
-    TtsVoice1(
-      voiceType: 'zh_female_shuangkuaisisi_moon_bigtts',
-      displayName: '爽快思思',
-      gender: 'female',
-      description: '活泼爽快',
+      description: 'StoryAi温暖少年',
     ),
     TtsVoice1(
-      voiceType: 'zh_female_qingxin',
-      displayName: '清新',
-      gender: 'female',
-      description: '温柔标准',
-    ),
-    TtsVoice1(
-      voiceType: 'zh_female_tianmei_moon_bigtts',
-      displayName: '甜美',
-      gender: 'female',
-      description: '甜美可爱',
-    ),
-    TtsVoice1(
-      voiceType: 'zh_male_silang_moon_bigtts',
-      displayName: '四郎',
+      voiceType: 'ICL_zh_male_flc_v1_tob',
+      displayName: '儒雅公子',
       gender: 'male',
-      description: '成熟磁性',
+      description: 'StoryAi儒雅公子',
     ),
     TtsVoice1(
-      voiceType: 'zh_male_jieshuo_moon_bigtts',
-      displayName: '解说',
+      voiceType: 'zh_male_changtianyi_mars_bigtts',
+      displayName: '悬疑解说',
       gender: 'male',
-      description: '新闻播报腔',
+      description: '悬疑解说风格适用于剪映C端、抖音、豆包',
     ),
     TtsVoice1(
-      voiceType: 'zh_female_wanwan',
-      displayName: '弯弯',
-      gender: 'female',
-      description: '台湾腔',
-    ),
-    TtsVoice1(
-      voiceType: 'zh_female_yueyu',
-      displayName: '粤语',
-      gender: 'female',
-      description: '粤语发音',
-    ),
-    TtsVoice1(
-      voiceType: 'zh_male_ningxiang',
-      displayName: '宁响',
+      voiceType: 'zh_male_ruyaqingnian_mars_bigtts',
+      displayName: '儒雅青年',
       gender: 'male',
-      description: '四川方言',
+      description: '儒雅青年男声,适用于番茄小说、豆包、剪映(指令遵循)',
     ),
+    TtsVoice1(
+      voiceType: 'zh_male_baqiqingshu_mars_bigtts',
+      displayName: '霸气青叔',
+      gender: 'male',
+      description: '霸气青叔声线,适用于番茄小说、豆包、剪映、剪映-Dreamina',
+    ),
+    TtsVoice1(
+      voiceType: 'zh_male_qingcang_mars_bigtts',
+      displayName: '擎苍',
+      gender: 'male',
+      description: '擎苍男声,适用于番茄小说、剪映、豆包、抖音(指令遵循)',
+    ),
+    TtsVoice1(
+      voiceType: 'zh_male_yangguangqingnian_mars_bigtts',
+      displayName: '活力小哥',
+      gender: 'male',
+      description: '活力小哥阳光青年(指令遵循)',
+    ),
+    TtsVoice1(
+      voiceType: 'zh_female_gufengshaoyu_mars_bigtts',
+      displayName: '古风少御',
+      gender: 'female',
+      description: '古风少御女声(指令遵循)',
+    ),
+    TtsVoice1(
+      voiceType: 'zh_female_wenroushunv_mars_bigtts',
+      displayName: '温柔淑女',
+      gender: 'female',
+      description: '温柔淑女声线,适用于番茄小说、豆包、剪映、剪映-Dreamina',
+    ),
+    TtsVoice1(
+      voiceType: 'zh_male_fanjuanqingnian_mars_bigtts',
+      displayName: '反卷青年',
+      gender: 'male',
+      description: '反卷青年男声(指令遵循)',
+    )
   ];
 }
 
@@ -160,7 +153,7 @@ class TtsVoice2 implements TtsVoice {
       voiceType: 'zh_female_vv_uranus_bigtts',
       displayName: 'Vivi 2.0',
       gender: 'female',
-      description: '自然温暖的女声，表现力更强',
+      description: '自然温暖的女声,表现力更强',
     ),
     TtsVoice2(
       voiceType: 'zh_female_xiaohe_uranus_bigtts',
@@ -181,53 +174,100 @@ class TtsVoice2 implements TtsVoice {
       description: '阳光活力的男声',
     ),
     // 扩展音色
+    // 有声阅读 - 儿童绘本
     TtsVoice2(
-      voiceType: 'zh_female_cancan_mars_bigtts',
-      displayName: '灿灿',
+      voiceType: 'zh_female_xueayi_saturn_bigtts',
+      displayName: '儿童绘本',
       gender: 'female',
-      description: '活泼亲切，带情感',
+      description: '有声阅读,适用于儿童绘本(指令遵循)',
     ),
+
+    // 视频配音 - 大壹
     TtsVoice2(
-      voiceType: 'zh_female_qingxin_mars_bigtts',
-      displayName: '清新',
+      voiceType: 'zh_male_dayi_saturn_bigtts',
+      displayName: '大壹',
+      gender: 'male',
+      description: '剪映视频配音,沉稳男声(指令遵循)',
+    ),
+
+    // 视频配音 - 黑猫侦探社咪
+    TtsVoice2(
+      voiceType: 'zh_female_mizai_saturn_bigtts',
+      displayName: '黑猫侦探社咪',
       gender: 'female',
-      description: '温柔清晰',
+      description: '剪映视频配音,侦探社风格女声(指令遵循)',
     ),
+
+    // 视频配音 - 鸡汤女
     TtsVoice2(
-      voiceType: 'zh_female_tianmei_mars_bigtts',
-      displayName: '甜美',
+      voiceType: 'zh_female_jitangnv_saturn_bigtts',
+      displayName: '鸡汤女',
       gender: 'female',
-      description: '甜美自然',
+      description: '剪映视频配音,情感女声(指令遵循)',
     ),
+
+    // 视频配音 - 魅力女友
     TtsVoice2(
-      voiceType: 'zh_female_shaonian_mars_bigtts',
-      displayName: '少年',
+      voiceType: 'zh_female_meilinvyou_saturn_bigtts',
+      displayName: '魅力女友',
       gender: 'female',
-      description: '中性少年音',
+      description: '剪映视频配音,魅力女友声线(指令遵循)',
     ),
+
+    // 视频配音 - 流畅女声
     TtsVoice2(
-      voiceType: 'zh_male_chenqu_mars_bigtts',
-      displayName: '陈趣',
-      gender: 'male',
-      description: '沉稳纪录片风格',
+      voiceType: 'zh_female_santongyongns_saturn_bigtts',
+      displayName: '流畅女声',
+      gender: 'female',
+      description: '剪映视频配音,流畅通用女声(指令遵循)',
     ),
+
+    // 角色扮演 - 儒雅逸辰
     TtsVoice2(
-      voiceType: 'zh_male_silang_mars_bigtts',
-      displayName: '四郎',
+      voiceType: 'zh_male_ruyayichen_saturn_bigtts',
+      displayName: '儒雅逸辰',
       gender: 'male',
-      description: '成熟大叔',
+      description: '角色扮演,儒雅男声(指令遵循)',
     ),
+
+    // 角色扮演 - 可爱女生
     TtsVoice2(
-      voiceType: 'zh_male_jieshuo_mars_bigtts',
-      displayName: '解说',
-      gender: 'male',
-      description: '标准播音',
+      voiceType: 'saturn_zh_female_keainvsheng_tob',
+      displayName: '可爱女生',
+      gender: 'female',
+      description: '角色扮演,可爱女生(指令遵循、COT/QA功能)',
     ),
+
+    // 角色扮演 - 调皮公主
     TtsVoice2(
-      voiceType: 'zh_male_wenhao_mars_bigtts',
-      displayName: '文浩',
+      voiceType: 'saturn_zh_female_tiaopigongzhu_tob',
+      displayName: '调皮公主',
+      gender: 'female',
+      description: '角色扮演,调皮公主(指令遵循、COT/QA功能)',
+    ),
+
+    // 角色扮演 - 爽朗少年
+    TtsVoice2(
+      voiceType: 'saturn_zh_male_shuanglangshaonian_tob',
+      displayName: '爽朗少年',
       gender: 'male',
-      description: '年轻男声',
+      description: '角色扮演,爽朗少年(指令遵循、COT/QA功能)',
+    ),
+
+    // 角色扮演 - 天才同桌
+    TtsVoice2(
+      voiceType: 'saturn_zh_male_tiancaitongzhuo_tob',
+      displayName: '天才同桌',
+      gender: 'male',
+      description: '角色扮演,天才同桌(指令遵循、COT/QA功能)',
+    ),
+
+    // 角色扮演 - 知性灿灿
+    TtsVoice2(
+      voiceType: 'saturn_zh_female_cancan_tob',
+      displayName: '知性灿灿',
+      gender: 'female',
+      description: '角色扮演,知性女声(指令遵循、COT/QA功能)',
     ),
   ];
 }
@@ -284,13 +324,14 @@ class CustomVoice implements TtsVoice {
 
 /// 音色工具类
 class TtsVoices {
-  static const String defaultVoice = 'BV001_streaming';
+  /// 默认音色 - Vivi 2.0
+  static const String defaultVoice = 'zh_female_vv_uranus_bigtts';
   static const String _customVoicesKey = 'custom_tts_voices';
   
   static List<CustomVoice> _customVoices = [];
   static bool _initialized = false;
 
-  /// 初始化，加载自定义音色
+  /// 初始化,加载自定义音色
   static Future<void> init() async {
     if (_initialized) return;
     
@@ -307,19 +348,19 @@ class TtsVoices {
     _initialized = true;
   }
 
-  /// 获取所有可用音色（包括自定义）
+  /// 获取所有可用音色(包括自定义) - 2.0音色在前
   static List<TtsVoice> getAllVoices() {
     final voices = <TtsVoice>[
-      ...TtsVoice1.voices,
       ...TtsVoice2.voices,
+      ...TtsVoice1.voices,
       ..._customVoices,
     ];
     return voices;
   }
 
-  /// 获取所有预设音色
+  /// 获取所有预设音色 - 2.0音色在前
   static List<TtsVoice> getPresetVoices() {
-    return [...TtsVoice1.voices, ...TtsVoice2.voices];
+    return [...TtsVoice2.voices, ...TtsVoice1.voices];
   }
 
   /// 获取自定义音色列表
@@ -352,7 +393,7 @@ class TtsVoices {
     await prefs.setStringList(_customVoicesKey, jsonList);
   }
 
-  /// 重置为默认音色列表（清空自定义）
+  /// 重置为默认音色列表(清空自定义)
   static Future<void> resetToDefault() async {
     _customVoices.clear();
     final prefs = await SharedPreferences.getInstance();

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'constants/app_constants.dart';
 import 'controllers/poem_controller.dart';
+import 'controllers/player_controller.dart';
 import 'pages/main_page.dart';
 import 'services/settings_service.dart';
 import 'services/tts_service.dart';
+import 'services/update_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +18,8 @@ void main() async {
   TtsService().setVoiceType(settingsService.voiceType.value);
   
   Get.put(PoemController());
+  Get.put(PlayerController());
+  Get.put(UpdateService());
   
   runApp(const GuYunReaderApp());
 }

@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import '../models/poem.dart';
 import '../models/poem_group.dart';
 import '../models/tts_result.dart';
+import 'player_controller.dart';
 
 // 导出 TimestampItem 供 UI 使用
 export '../models/tts_result.dart' show TimestampItem;
@@ -387,34 +388,48 @@ class PoemController extends GetxController {
 
   /// 播放/暂停切换
   Future<void> togglePlay() async {
+    debugPrint('[PoemController] togglePlay called');
     final poem = currentPoem.value;
     if (poem == null) {
+      debugPrint('[PoemController] no poem selected');
       errorMessage.value = '错误: 未选择诗词';
       return;
     }
     
-    // 防止重复点击
-    if (playbackState.value == PlaybackState.loading) {
-      _ttsService.cancelDownload();
-      playbackState.value = PlaybackState.idle;
-      errorMessage.value = '已取消';
+    // 委托给 PlayerController
+    final playerController = Get.find<PlayerController>();
+    debugPrint('[PoemController] playerController.currentPoem: ${playerController.currentPoem?.title}');
+    
+    // 如果要播放的诗词不在当前播放列表中，清空列表并播放新的
+    final isInPlaylist = playerController.isInPlaylist(poem.id!);
+    if (!isInPlaylist) {
+      // 清空当前播放列表，播放新诗词
+      debugPrint('[PoemController] poem not in playlist, clearing and playing ${poem.title}');
+      playerController.clearPlaylist();
+      await playerController.playGroup([poem], 0);
       return;
     }
-
-    switch (playbackState.value) {
-      case PlaybackState.idle:
-      case PlaybackState.error:
-        await _startPlay(poem);
-        break;
-      case PlaybackState.playing:
-        await pause();
-        break;
-      case PlaybackState.paused:
-        await resume();
-        break;
-      default:
-        break;
+    
+    // 如果在播放列表中但不是当前播放的，切换到该诗词
+    if (playerController.currentPoem?.id != poem.id) {
+      final index = playerController.playlist.indexWhere((p) => p.id == poem.id);
+      if (index != -1) {
+        debugPrint('[PoemController] switching to poem at index $index');
+        playerController.currentIndex.value = index;
+        await playerController.playGroup(playerController.playlist, index);
+        return;
+      }
     }
+    
+    // 当前正在播放的诗词，切换播放/暂停
+    debugPrint('[PoemController] toggling play/pause');
+    await playerController.togglePlay();
+  }
+  
+  /// 播放分组（供分组页面调用）
+  Future<void> playGroup(List<Poem> poems, int initialIndex) async {
+    final playerController = Get.find<PlayerController>();
+    await playerController.playGroup(poems, initialIndex);
   }
 
   /// 开始播放（带缓存逻辑）
@@ -592,7 +607,7 @@ class PoemController extends GetxController {
 
   // ==================== 分组顺序播放 ====================
 
-  /// 按分组顺序播放
+  /// 按分组顺序播放 - 使用 PlayerController
   Future<void> playGroupInOrder(List<Poem> poems) async {
     if (poems.isEmpty) {
       Get.snackbar(
@@ -603,34 +618,42 @@ class PoemController extends GetxController {
       return;
     }
 
-    // 获取最近使用的音色
-    final settings = SettingsService.to;
-    final lastUsedVoice = settings.voiceType.value;
+    // 使用 PlayerController 播放
+    final playerController = Get.find<PlayerController>();
+    await playerController.playGroup(poems, 0);
+    
+    // 同时更新当前选中的诗词
+    selectPoem(poems[0]);
+  }
 
-    // 顺序播放
-    for (int i = 0; i < poems.length; i++) {
-      final poem = poems[i];
+  /// 从分组中移除诗词
+  Future<void> removePoemFromGroup(int poemId) async {
+    try {
+      final poem = poems.firstWhereOrNull((p) => p.id == poemId);
+      if (poem == null) return;
       
-      // 选择当前诗词
-      selectPoem(poem);
+      // 更新数据库
+      await _db.updatePoemGroup(poemId, null);
       
-      // 开始播放
-      await _startPlay(poem);
-      
-      // 等待播放完成
-      while (playbackState.value == PlaybackState.playing) {
-        await Future.delayed(const Duration(milliseconds: 500));
+      // 更新内存状态
+      final index = poems.indexWhere((p) => p.id == poemId);
+      if (index != -1) {
+        poems[index] = poem.copyWith(groupId: null);
+        poems.refresh();
       }
       
-      // 如果用户停止播放，退出循环
-      if (playbackState.value == PlaybackState.idle) {
-        break;
-      }
-      
-      // 播放下一首前的间隔
-      if (i < poems.length - 1) {
-        await Future.delayed(const Duration(seconds: 2));
-      }
+      Get.snackbar(
+        '成功',
+        '已从分组中移除',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      debugPrint('移除分组失败: $e');
+      Get.snackbar(
+        '错误',
+        '移除失败: $e',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 }
