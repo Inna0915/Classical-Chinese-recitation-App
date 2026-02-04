@@ -9,6 +9,8 @@ import '../controllers/poem_controller.dart';
 import '../services/settings_service.dart';
 import '../services/update_service.dart';
 import '../widgets/settings/index.dart';
+import 'settings/llm_config_page.dart';
+import 'settings/tts_config_page.dart';
 
 /// 设置页面 - Cherry Studio / iOS 风格重构
 /// 
@@ -88,17 +90,21 @@ class _SettingsPageState extends State<SettingsPage> {
     return SettingsSection(
       title: 'AI 模型与服务',
       children: [
-        SettingsTile(
+        Obx(() => SettingsTile(
           icon: Icons.smart_toy_outlined,
           iconBackgroundColor: const Color(0xFFE8F5E9), // 淡绿色背景
           iconColor: const Color(0xFF4CAF50),
           title: '模型服务商',
-          subtitle: '配置 AI 翻译和讲解服务',
+          subtitle: settingsService.hasAIConfig.value 
+              ? '当前: ${AIModels.providers[settingsService.aiProvider.value]?.name ?? settingsService.aiProvider.value}'
+              : '配置 AI 翻译和讲解服务',
           trailing: SettingsTileTrailing.badge,
-          badgeText: '已连接',
-          badgeColor: const Color(0xFF4CAF50),
-          onTap: () => _showAIProviderSelector(),
-        ),
+          badgeText: settingsService.hasAIConfig.value ? '已配置' : '未配置',
+          badgeColor: settingsService.hasAIConfig.value 
+              ? const Color(0xFF4CAF50) 
+              : Colors.orange,
+          onTap: () => Get.to(() => const LlmConfigPage()),
+        )),
       ],
     );
   }
@@ -131,15 +137,15 @@ class _SettingsPageState extends State<SettingsPage> {
     return SettingsSection(
       title: '语音与播放',
       children: [
-        SettingsTile(
+        Obx(() => SettingsTile(
           icon: Icons.record_voice_over_outlined,
           iconBackgroundColor: const Color(0xFFE3F2FD), // 淡蓝色背景
           iconColor: const Color(0xFF2196F3),
           title: 'TTS 服务配置',
-          subtitle: '音色选择、语速调节',
+          subtitle: '当前音色: ${TtsVoices.getDisplayName(settingsService.voiceType.value)}',
           trailing: SettingsTileTrailing.arrow,
-          onTap: () => _showTTSConfigDialog(),
-        ),
+          onTap: () => Get.to(() => const TtsConfigPage()),
+        )),
       ],
     );
   }
@@ -159,224 +165,6 @@ class _SettingsPageState extends State<SettingsPage> {
           onTap: () => _showAboutDialog(),
         ),
       ],
-    );
-  }
-
-  // ==================== AI 配置对话框 ====================
-
-  void _showAIProviderSelector() {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          '选择 AI 服务商',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: AIModels.providers.keys.length,
-            itemBuilder: (context, index) {
-              final providerKey = AIModels.providers.keys.elementAt(index);
-              final provider = AIModels.providers[providerKey]!;
-              final isSelected = settingsService.aiProvider.value == providerKey;
-              
-              return ListTile(
-                title: Text(provider.name),
-                subtitle: Text(provider.models.join(', ')),
-                trailing: isSelected 
-                    ? const Icon(Icons.check, color: Color(UIConstants.accentColor))
-                    : null,
-                onTap: () {
-                  settingsService.saveAIProvider(providerKey);
-                  Get.back();
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== TTS 配置对话框 ====================
-
-  void _showTTSConfigDialog() {
-    Get.bottomSheet(
-      Container(
-        decoration: const BoxDecoration(
-          color: Color(UIConstants.cardColor),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(UIConstants.defaultRadius)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 拖动指示条
-              Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(top: 12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              
-              // 标题
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const Text(
-                      'TTS 服务配置',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () => _showResetConfirmDialog(),
-                      child: const Text(
-                        '重置',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              const Divider(height: 1),
-              
-              // 音色选择
-              ListTile(
-                leading: const Icon(Icons.person_outline),
-                title: const Text('当前音色'),
-                subtitle: Obx(() => Text(
-                  TtsVoices.getDisplayName(settingsService.voiceType.value),
-                )),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _showVoiceSelector(),
-              ),
-              
-              const Divider(height: 1, indent: 56),
-              
-              // 语速调节
-              Obx(() => ListTile(
-                leading: const Icon(Icons.speed),
-                title: const Text('语速'),
-                subtitle: Slider(
-                  value: settingsService.speechRate.value.toDouble(),
-                  min: -50,
-                  max: 100,
-                  divisions: 30,
-                  label: settingsService.speechRate.value.toString(),
-                  onChanged: (value) {
-                    settingsService.saveSpeechRate(value.round());
-                  },
-                ),
-              )),
-              
-              const Divider(height: 1, indent: 56),
-              
-              // 音量调节
-              Obx(() => ListTile(
-                leading: const Icon(Icons.volume_up),
-                title: const Text('音量'),
-                subtitle: Slider(
-                  value: settingsService.loudnessRate.value.toDouble(),
-                  min: -50,
-                  max: 100,
-                  divisions: 30,
-                  label: settingsService.loudnessRate.value.toString(),
-                  onChanged: (value) {
-                    settingsService.saveLoudnessRate(value.round());
-                  },
-                ),
-              )),
-              
-              const SizedBox(height: 16),
-            ],
-          ),
-        ),
-      ),
-      isScrollControlled: true,
-    );
-  }
-
-  void _showVoiceSelector() {
-    final voices = TtsVoices.getAllVoices();
-    
-    Get.to(() => Scaffold(
-      appBar: AppBar(
-        title: const Text('选择音色'),
-        backgroundColor: const Color(UIConstants.backgroundColor),
-      ),
-      body: ListView.builder(
-        itemCount: voices.length,
-        itemBuilder: (context, index) {
-          final voice = voices[index];
-          final isSelected = settingsService.voiceType.value == voice.voiceType;
-          
-          return ListTile(
-            title: Text(voice.displayName),
-            subtitle: Text(voice.description),
-            trailing: isSelected 
-                ? const Icon(Icons.check, color: Color(UIConstants.accentColor))
-                : null,
-            onTap: () {
-              settingsService.saveVoiceType(voice.voiceType);
-              Get.back();
-            },
-          );
-        },
-      ),
-    ));
-  }
-
-  void _showResetConfirmDialog() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('重置 TTS 配置'),
-        content: const Text('确定要将所有 TTS 设置恢复为默认值吗？'),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              settingsService.resetTtsConfig();
-              Get.back();
-              Get.back();
-              Get.snackbar(
-                '重置成功',
-                'TTS 配置已恢复为默认值',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('重置'),
-          ),
-        ],
-      ),
     );
   }
 

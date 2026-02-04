@@ -1,12 +1,12 @@
 /// 应用更新记录
 class Changelog {
   static const String currentVersion = 'v1.5.0';
-  static const String currentDate = '2025-02-04';
+  static const String currentDate = '2026-02-04';
   
   static const List<VersionInfo> versions = [
     VersionInfo(
       version: 'v1.5.0',
-      date: '2025-02-04',
+      date: '2026-02-04',
       changes: [
         '✨ 新增自动更新功能，支持从 GitHub Releases 检查更新',
         '✨ 设置页面新增"检查更新"入口',
@@ -22,7 +22,7 @@ class Changelog {
     ),
     VersionInfo(
       version: 'v1.4.0',
-      date: '2025-02-04',
+      date: '2026-02-04',
       changes: [
         '✨ 新增全局迷你播放控制条（MiniPlayer）',
         '✨ MiniPlayer支持旋转意境图标动画',
@@ -34,7 +34,7 @@ class Changelog {
     ),
     VersionInfo(
       version: 'v1.3.0',
-      date: '2025-02-04',
+      date: '2026-02-04',
       changes: [
         '✨ 新增卡拉OK逐字高亮朗读功能',
         '✨ AI配置API KEY支持明文/密文切换显示',
@@ -48,7 +48,7 @@ class Changelog {
     ),
     VersionInfo(
       version: 'v1.2.0',
-      date: '2025-02-03',
+      date: '2026-02-03',
       changes: [
         '✨ 新增独立分组浏览界面，支持查看各分组内容',
         '✨ 新增分组顺序播放功能，支持连续播放分组内诗词',
@@ -61,7 +61,7 @@ class Changelog {
     ),
     VersionInfo(
       version: 'v1.1.0',
-      date: '2025-02-02',
+      date: '2026-02-02',
       changes: [
         '✨ 新增流式播放功能，边合成边播放',
         '✨ 支持 Doubao 1.0/2.0 双版本音色（各 12 种）',
@@ -74,7 +74,7 @@ class Changelog {
     ),
     VersionInfo(
       version: 'v1.0.0',
-      date: '2024',
+      date: '2026',
       changes: [
         '🎉 初始版本发布',
       ],

@@ -202,6 +202,36 @@ class SettingsService extends GetxService {
     await _prefs.setString(_keyCustomPrompt, prompt);
     customPrompt.value = prompt;
   }
+  
+  /// 保存自定义 URL（兼容方法）
+  Future<void> saveAICustomUrl(String url) async {
+    if (url.isNotEmpty) {
+      await _prefs.setString(_keyAIApiUrl, url);
+      aiApiUrl.value = url;
+    }
+  }
+  
+  /// 重置 AI 配置
+  Future<void> resetAIConfig() async {
+    await _prefs.remove(_keyAIProvider);
+    await _prefs.remove(_keyAIApiKey);
+    await _prefs.remove(_keyAIApiUrl);
+    await _prefs.remove(_keyAIModel);
+    await _prefs.remove(_keyCustomPrompt);
+    
+    aiProvider.value = 'kimi';
+    aiApiKey.value = 'sk-ChamvmW4vYwSPXwuXOa1ViZuU4TgHMFOJxNRkFfvXm5aJ2F2';
+    aiApiUrl.value = 'https://api.moonshot.cn/v1/chat/completions';
+    aiModel.value = 'kimi-k2-turbo-preview';
+    customPrompt.value = '';
+    hasAIConfig.value = true;
+    
+    // 保存默认值
+    await _prefs.setString(_keyAIProvider, 'kimi');
+    await _prefs.setString(_keyAIApiKey, aiApiKey.value);
+    await _prefs.setString(_keyAIApiUrl, aiApiUrl.value);
+    await _prefs.setString(_keyAIModel, aiModel.value);
+  }
 
   // ==================== 清除配置 ====================
   
