@@ -10,6 +10,9 @@
     <!-- 安装应用权限（Android 8.0+） -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     
+    <!-- 通知权限（Android 13+） -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    
     <application
         android:label="诗文朗诵"
         android:name="${applicationName}"

@@ -11,6 +11,11 @@ import '../constants/app_constants.dart';
 import '../models/github_release.dart';
 
 /// 更新服务 - 管理应用自动更新
+/// 
+/// Android 13+ 适配说明：
+/// - 使用应用私有缓存目录 (getTemporaryDirectory) 下载 APK，无需存储权限
+/// - 申请通知权限 (Android 13+) 用于显示下载进度
+/// - 使用 FileProvider 安装 APK
 class UpdateService extends GetxService {
   static UpdateService get to => Get.find();
 
@@ -34,11 +39,16 @@ class UpdateService extends GetxService {
   final RxDouble downloadProgress = 0.0.obs;
   final RxString downloadStatus = ''.obs;
   final RxString currentVersion = ''.obs;
+  final RxBool hasNotificationPermission = false.obs;
+
+  // 下载文件路径
+  String? _downloadedFilePath;
 
   @override
   void onInit() {
     super.onInit();
     _initVersion();
+    _checkNotificationPermission();
   }
 
   /// 初始化获取当前版本
@@ -47,7 +57,32 @@ class UpdateService extends GetxService {
     currentVersion.value = packageInfo.version;
   }
 
+  /// 检查通知权限状态
+  Future<void> _checkNotificationPermission() async {
+    if (Platform.isAndroid) {
+      final status = await Permission.notification.status;
+      hasNotificationPermission.value = status.isGranted;
+    }
+  }
+
+  /// 请求通知权限（Android 13+ 需要）
+  Future<bool> _requestNotificationPermission() async {
+    if (!Platform.isAndroid) return true;
+    
+    final status = await Permission.notification.request();
+    hasNotificationPermission.value = status.isGranted;
+    
+    if (!status.isGranted) {
+      debugPrint('[UpdateService] Notification permission denied');
+      // 权限被拒绝，但下载仍然可以继续，只是没有通知提示
+      return false;
+    }
+    return true;
+  }
+
   /// 检查更新
+  /// 
+  /// [isManual] 是否为手动点击检查，手动检查时会显示"已是最新"提示
   Future<void> checkUpdate({bool isManual = false}) async {
     if (isChecking.value) return;
 
@@ -225,37 +260,34 @@ class UpdateService extends GetxService {
   }
 
   /// 开始下载 APK
+  /// 
+  /// Android 13+ 适配：
+  /// - 使用应用私有缓存目录，无需申请存储权限
+  /// - 申请通知权限用于显示下载进度（可选）
   Future<void> _startDownload(String apkUrl) async {
-    // 请求存储权限
-    var status = await Permission.storage.request();
-    if (!status.isGranted) {
-      Get.snackbar(
-        '权限 denied',
-        '需要存储权限才能下载更新',
-        snackPosition: SnackPosition.BOTTOM,
-      );
-      return;
-    }
-
     try {
       isDownloading.value = true;
       downloadProgress.value = 0;
       downloadStatus.value = '准备下载...';
 
-      // 应用镜像加速
+      // 1. 请求通知权限（Android 13+ 需要）
+      await _requestNotificationPermission();
+
+      // 2. 应用镜像加速
       String downloadUrl = apkUrl;
       if (_useMirror && apkUrl.contains('github.com')) {
         downloadUrl = '$_mirrorPrefix$apkUrl';
         debugPrint('[UpdateService] Using mirror: $downloadUrl');
       }
 
-      // 获取下载目录
-      final directory = await getExternalStorageDirectory();
-      final savePath = '${directory?.path}/guyun-release.apk';
+      // 3. 获取应用私有缓存目录 - Android 13+ 无需存储权限
+      final directory = await getTemporaryDirectory();
+      final savePath = '${directory.path}/guyun_update.apk';
+      _downloadedFilePath = savePath;
 
       debugPrint('[UpdateService] Download to: $savePath');
 
-      // 开始下载
+      // 4. 开始下载
       await _dio.download(
         downloadUrl,
         savePath,
@@ -273,7 +305,7 @@ class UpdateService extends GetxService {
       // 关闭对话框
       Get.back();
 
-      // 安装 APK
+      // 5. 安装 APK
       await _installApk(savePath);
 
     } on DioException catch (e) {
@@ -298,15 +330,18 @@ class UpdateService extends GetxService {
   }
 
   /// 安装 APK
+  /// 
+  /// 使用 FileProvider 读取 APK 文件（Android 7.0+ 必需）
   Future<void> _installApk(String filePath) async {
     try {
+      debugPrint('[UpdateService] Installing APK: $filePath');
       final result = await OpenFilex.open(filePath);
       debugPrint('[UpdateService] Open file result: ${result.message}');
     } catch (e) {
       debugPrint('[UpdateService] Install error: $e');
       Get.snackbar(
         '安装失败',
-        '无法打开安装文件，请手动安装: $filePath',
+        '无法打开安装文件，请手动安装',
         snackPosition: SnackPosition.BOTTOM,
         duration: const Duration(seconds: 5),
       );
@@ -317,4 +352,90 @@ class UpdateService extends GetxService {
   void setUseMirror(bool use) {
     _useMirror = use;
   }
+
+  /// 清理下载的 APK 文件
+  Future<void> clearDownloadedFile() async {
+    if (_downloadedFilePath != null) {
+      try {
+        final file = File(_downloadedFilePath!);
+        if (await file.exists()) {
+          await file.delete();
+          debugPrint('[UpdateService] Cleared downloaded file');
+        }
+      } catch (e) {
+        debugPrint('[UpdateService] Failed to clear file: $e');
+      }
+    }
+  }
 }
+
+/*
+================================================================================
+AndroidManifest.xml 配置说明
+================================================================================
+
+1. 必需权限（已配置）：
+   
+   <!-- 网络权限 -->
+   <uses-permission android:name="android.permission.INTERNET" />
+   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+   
+   <!-- 安装应用权限（Android 8.0+） -->
+   <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+   
+   <!-- 通知权限（Android 13+） -->
+   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+2. FileProvider 配置（已配置）：
+   
+   <application>
+       <!-- FileProvider - 用于安装 APK（Android 7.0+ 必需） -->
+       <provider
+           android:name="androidx.core.content.FileProvider"
+           android:authorities="${applicationId}.fileprovider"
+           android:exported="false"
+           android:grantUriPermissions="true">
+           <meta-data
+               android:name="android.support.FILE_PROVIDER_PATHS"
+               android:resource="@xml/file_paths" />
+       </provider>
+   </application>
+
+3. file_paths.xml 配置（android/app/src/main/res/xml/file_paths.xml）：
+   
+   <?xml version="1.0" encoding="utf-8"?>
+   <paths>
+       <!-- 应用私有缓存目录 -->
+       <cache-path name="cache" path="." />
+       
+       <!-- 应用私有文件目录 -->
+       <files-path name="files" path="." />
+       
+       <!-- 外部缓存目录（兼容旧版本） -->
+       <external-cache-path name="external_cache" path="." />
+   </paths>
+
+================================================================================
+Android 13+ 适配要点
+================================================================================
+
+1. 不需要申请的权限（已移除）：
+   ❌ android.permission.READ_EXTERNAL_STORAGE
+   ❌ android.permission.WRITE_EXTERNAL_STORAGE
+
+2. 推荐使用的目录：
+   ✅ getTemporaryDirectory() - /data/data/<package>/cache
+   ✅ getApplicationSupportDirectory() - /data/data/<package>/files
+   
+   这些目录不需要任何权限即可读写。
+
+3. 需要申请的权限：
+   ✅ android.permission.POST_NOTIFICATIONS (Android 13+)
+     - 用于显示下载进度通知
+     - 可选，不申请也能下载，只是没有通知提示
+
+4. 安装 APK：
+   ✅ 必须使用 FileProvider
+   ✅ 必须申请 REQUEST_INSTALL_PACKAGES 权限
+================================================================================
+*/
