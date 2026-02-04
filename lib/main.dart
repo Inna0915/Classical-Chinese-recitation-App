@@ -29,20 +29,28 @@ class GuYunReaderApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetMaterialApp(
-      title: '诗文朗诵',
-      debugShowCheckedModeBanner: false,
-      theme: _buildTheme(),
-      home: const MainPage(),
-    );
+    return Obx(() {
+      final settingsService = SettingsService.to;
+      final fontFamily = settingsService.currentFontFamily;
+      
+      return GetMaterialApp(
+        title: '诗文朗诵',
+        debugShowCheckedModeBanner: false,
+        theme: _buildTheme(fontFamily),
+        home: const MainPage(),
+      );
+    });
   }
 
   /// 构建应用主题
-  ThemeData _buildTheme() {
+  /// 
+  /// [fontFamily] 为 null 时使用系统默认字体
+  ThemeData _buildTheme(String? fontFamily) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       scaffoldBackgroundColor: const Color(UIConstants.backgroundColor),
+      fontFamily: fontFamily,
       colorScheme: const ColorScheme.light(
         primary: Color(UIConstants.primaryColor),
         secondary: Color(UIConstants.accentColor),
@@ -53,44 +61,44 @@ class GuYunReaderApp extends StatelessWidget {
         onSurface: Color(UIConstants.textPrimaryColor),
         onBackground: Color(UIConstants.textPrimaryColor),
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(UIConstants.backgroundColor),
+      appBarTheme: AppBarTheme(
+        backgroundColor: const Color(UIConstants.backgroundColor),
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          color: Color(UIConstants.textPrimaryColor),
-          fontFamily: FontConstants.chineseSerif,
+          color: const Color(UIConstants.textPrimaryColor),
+          fontFamily: fontFamily,
           fontSize: FontConstants.titleSize,
           fontWeight: FontWeight.bold,
         ),
-        iconTheme: IconThemeData(
+        iconTheme: const IconThemeData(
           color: Color(UIConstants.textPrimaryColor),
         ),
       ),
-      textTheme: const TextTheme(
+      textTheme: TextTheme(
         headlineLarge: TextStyle(
-          fontFamily: FontConstants.chineseSerif,
-          color: Color(UIConstants.textPrimaryColor),
+          fontFamily: fontFamily,
+          color: const Color(UIConstants.textPrimaryColor),
         ),
         headlineMedium: TextStyle(
-          fontFamily: FontConstants.chineseSerif,
-          color: Color(UIConstants.textPrimaryColor),
+          fontFamily: fontFamily,
+          color: const Color(UIConstants.textPrimaryColor),
         ),
         titleLarge: TextStyle(
-          fontFamily: FontConstants.chineseSerif,
-          color: Color(UIConstants.textPrimaryColor),
+          fontFamily: fontFamily,
+          color: const Color(UIConstants.textPrimaryColor),
         ),
         titleMedium: TextStyle(
-          fontFamily: FontConstants.chineseSerif,
-          color: Color(UIConstants.textPrimaryColor),
+          fontFamily: fontFamily,
+          color: const Color(UIConstants.textPrimaryColor),
         ),
         bodyLarge: TextStyle(
-          fontFamily: FontConstants.chineseSerif,
-          color: Color(UIConstants.textPrimaryColor),
+          fontFamily: fontFamily,
+          color: const Color(UIConstants.textPrimaryColor),
         ),
         bodyMedium: TextStyle(
-          fontFamily: FontConstants.chineseSerif,
-          color: Color(UIConstants.textSecondaryColor),
+          fontFamily: fontFamily,
+          color: const Color(UIConstants.textSecondaryColor),
         ),
       ),
       dividerTheme: const DividerThemeData(

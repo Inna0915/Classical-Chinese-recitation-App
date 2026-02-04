@@ -10,6 +10,9 @@ class SettingsService extends GetxService {
   
   late SharedPreferences _prefs;
   
+  // ==================== 外观配置 Keys ====================
+  static const String _keyUseSystemFont = 'use_system_font';
+  
   // ==================== TTS 配置 Keys ====================
   static const String _keyVoiceType = 'tts_voice_type';
   
@@ -20,6 +23,10 @@ class SettingsService extends GetxService {
   static const String _keyAIModel = 'ai_model';
   static const String _keyCustomPrompt = 'custom_prompt';
   
+  // ==================== 外观 Observable 配置项 ====================
+  /// 是否使用系统字体
+  final RxBool useSystemFont = false.obs;
+
   // ==================== TTS Observable 配置项 ====================
   /// 当前选择的音色
   final RxString voiceType = TtsVoices.defaultVoice.obs;
@@ -37,6 +44,9 @@ class SettingsService extends GetxService {
   final RxString aiModel = ''.obs;
   final RxString customPrompt = ''.obs;
   final RxBool hasAIConfig = false.obs;
+  
+  /// 获取当前字体
+  String? get currentFontFamily => useSystemFont.value ? null : FontConstants.chineseSerif;
 
   Future<SettingsService> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -46,6 +56,9 @@ class SettingsService extends GetxService {
 
   /// 加载设置
   void _loadSettings() {
+    // 外观配置
+    useSystemFont.value = _prefs.getBool(_keyUseSystemFont) ?? false;
+    
     // TTS 配置 - 只加载音色和语音参数
     voiceType.value = _prefs.getString(_keyVoiceType) ?? TtsVoices.defaultVoice;
     speechRate.value = _prefs.getInt('tts_speech_rate') ?? 0;
@@ -88,6 +101,14 @@ class SettingsService extends GetxService {
         aiApiUrl.value = provider.apiUrl;
       }
     }
+  }
+
+  // ==================== 外观配置方法 ====================
+  
+  /// 保存是否使用系统字体
+  Future<void> saveUseSystemFont(bool use) async {
+    await _prefs.setBool(_keyUseSystemFont, use);
+    useSystemFont.value = use;
   }
 
   // ==================== TTS 配置方法 ====================

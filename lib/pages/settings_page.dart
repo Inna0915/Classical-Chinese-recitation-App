@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../constants/ai_models.dart';
-import '../constants/ai_prompts.dart';
 import '../constants/app_constants.dart';
 import '../constants/changelog.dart';
 import '../constants/tts_voices.dart';
 import '../controllers/poem_controller.dart';
 import '../services/settings_service.dart';
-import '../services/tts_service.dart';
 import '../services/update_service.dart';
+import '../widgets/settings/index.dart';
 
-/// 设置页面
+/// 设置页面 - Cherry Studio / iOS 风格重构
+/// 
+/// 设计特点：
+/// - 分组卡片式布局 (Inset Grouped)
+/// - 极淡灰色背景
+/// - 圆角白色卡片
+/// - 精致的分割线和间距
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -20,978 +25,181 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  // 动态模型列表（用于同步后更新）
-  final RxMap<String, List<String>> _dynamicModels = <String, List<String>>{}.obs;
+  final SettingsService settingsService = SettingsService.to;
+  final PoemController poemController = PoemController.to;
+  
+  String _version = '1.0.0';
 
   @override
   void initState() {
     super.initState();
-    // 初始化动态模型列表为预设值
-    _resetDynamicModels();
+    _loadVersion();
   }
 
-  void _resetDynamicModels() {
-    _dynamicModels.value = {
-      'kimi': ['kimi-k2-turbo-preview', 'moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
-      'deepseek': ['deepseek-chat', 'deepseek-coder'],
-      'qwen': ['qwen-turbo', 'qwen-plus', 'qwen-max'],
-      'gemini': ['gemini-pro', 'gemini-pro-vision'],
-      'openai': ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo'],
-      'custom': [],
-    };
+  Future<void> _loadVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      _version = packageInfo.version;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final settings = SettingsService.to;
-
     return Scaffold(
-      backgroundColor: const Color(UIConstants.backgroundColor),
+      backgroundColor: const Color(0xFFF5F5F5), // 极淡灰色背景
       appBar: AppBar(
-        backgroundColor: const Color(UIConstants.backgroundColor),
+        backgroundColor: const Color(0xFFF5F5F5),
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios,
-            color: Color(UIConstants.textPrimaryColor),
-          ),
-          onPressed: () => Get.back(),
-        ),
+        centerTitle: true,
         title: const Text(
           '设置',
           style: TextStyle(
-            color: Color(UIConstants.textPrimaryColor),
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.only(top: 8, bottom: 32),
+          children: [
+            // Group 1: AI & Intelligence
+            _buildAISection(),
+            
+            // Group 2: Appearance
+            _buildAppearanceSection(),
+            
+            // Group 3: Voice & Playback
+            _buildVoiceSection(),
+            
+            // Group 4: About & Updates
+            _buildAboutSection(),
+            
+            // 底部间距
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// AI & Intelligence 分组
+  Widget _buildAISection() {
+    return SettingsSection(
+      title: 'AI 模型与服务',
+      children: [
+        SettingsTile(
+          icon: Icons.smart_toy_outlined,
+          iconBackgroundColor: const Color(0xFFE8F5E9), // 淡绿色背景
+          iconColor: const Color(0xFF4CAF50),
+          title: '模型服务商',
+          subtitle: '配置 AI 翻译和讲解服务',
+          trailing: SettingsTileTrailing.badge,
+          badgeText: '已连接',
+          badgeColor: const Color(0xFF4CAF50),
+          onTap: () => _showAIProviderSelector(),
+        ),
+      ],
+    );
+  }
+
+  /// Appearance 分组
+  Widget _buildAppearanceSection() {
+    return Obx(() => SettingsSection(
+      title: '外观与显示',
+      children: [
+        SettingsTile(
+          icon: Icons.text_format,
+          iconBackgroundColor: const Color(0xFFFFF3E0), // 淡橙色背景
+          iconColor: const Color(0xFFFF9800),
+          title: '使用系统字体',
+          subtitle: settingsService.useSystemFont.value 
+              ? '当前使用系统默认字体 (如 MiSans)'
+              : '当前使用古风宋体 (思源宋体)',
+          trailing: SettingsTileTrailing.switch_,
+          switchValue: settingsService.useSystemFont.value,
+          onSwitchChanged: (value) {
+            settingsService.saveUseSystemFont(value);
+          },
+        ),
+      ],
+    ));
+  }
+
+  /// Voice & Playback 分组
+  Widget _buildVoiceSection() {
+    return SettingsSection(
+      title: '语音与播放',
+      children: [
+        SettingsTile(
+          icon: Icons.record_voice_over_outlined,
+          iconBackgroundColor: const Color(0xFFE3F2FD), // 淡蓝色背景
+          iconColor: const Color(0xFF2196F3),
+          title: 'TTS 服务配置',
+          subtitle: '音色选择、语速调节',
+          trailing: SettingsTileTrailing.arrow,
+          onTap: () => _showTTSConfigDialog(),
+        ),
+      ],
+    );
+  }
+
+  /// About & Updates 分组
+  Widget _buildAboutSection() {
+    return SettingsSection(
+      title: '关于与更新',
+      children: [
+        SettingsTile(
+          icon: Icons.info_outline,
+          iconBackgroundColor: const Color(0xFFF3E5F5), // 淡紫色背景
+          iconColor: const Color(0xFF9C27B0),
+          title: '关于古韵诵读',
+          trailing: SettingsTileTrailing.text,
+          trailingText: 'v$_version',
+          onTap: () => _showAboutDialog(),
+        ),
+      ],
+    );
+  }
+
+  // ==================== AI 配置对话框 ====================
+
+  void _showAIProviderSelector() {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: const Color(UIConstants.cardColor),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
+        ),
+        title: const Text(
+          '选择 AI 服务商',
+          style: TextStyle(
             fontFamily: FontConstants.chineseSerif,
-            fontSize: FontConstants.titleSize,
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(UIConstants.defaultPadding),
-        children: [
-          // AI 模型配置区域
-          _buildSectionTitle('AI 模型配置（用于自动生成诗词）'),
-          const SizedBox(height: 12),
-          _buildAIConfigCard(settings),
-          
-          const SizedBox(height: 24),
-          
-          // TTS 配置区域 - 简化版
-          _buildSectionTitle('语音合成配置（用于朗读）'),
-          const SizedBox(height: 12),
-          _buildTtsConfigCard(settings),
-          
-          const SizedBox(height: 24),
-          
-          // 缓存管理
-          _buildSectionTitle('缓存管理'),
-          const SizedBox(height: 12),
-          _buildCacheCard(),
-          
-          const SizedBox(height: 24),
-          
-          // 关于应用
-          _buildSectionTitle('关于'),
-          const SizedBox(height: 12),
-          _buildAboutCard(),
-        ],
-      ),
-    );
-  }
-
-  // ==================== UI 构建方法 ====================
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontFamily: FontConstants.chineseSerif,
-        fontSize: FontConstants.bodySize,
-        fontWeight: FontWeight.bold,
-        color: Color(UIConstants.textPrimaryColor),
-      ),
-    );
-  }
-
-  /// TTS 配置卡片 - 简化版
-  Widget _buildTtsConfigCard(SettingsService settings) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(UIConstants.cardColor),
-        borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        border: Border.all(
-          color: const Color(UIConstants.dividerColor),
-        ),
-      ),
-      child: Column(
-        children: [
-          // 状态指示
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(UIConstants.defaultRadius),
-                topRight: Radius.circular(UIConstants.defaultRadius),
-              ),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'TTS 已配置',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        '使用内置火山引擎凭证，无需额外配置',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(UIConstants.textSecondaryColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          // 朗读音色选择
-          ListTile(
-            leading: const Icon(
-              Icons.record_voice_over_outlined,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: const Text('朗读音色'),
-            subtitle: Obx(() => Text(
-              TtsVoices.getDisplayName(settings.voiceType.value),
-              style: const TextStyle(fontSize: 12),
-            )),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showVoiceTypeDialog(settings),
-          ),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          // 内置配置查看/修改
-          ListTile(
-            leading: const Icon(
-              Icons.key_outlined,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: const Text('内置配置'),
-            subtitle: const Text(
-              '查看/修改火山引擎 API 配置',
-              style: TextStyle(fontSize: 12),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showTtsConfigDialog(),
-          ),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          // TTS 连接测试按钮
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => _testTTSConnection(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(UIConstants.accentColor).withOpacity(0.1),
-                      foregroundColor: const Color(UIConstants.accentColor),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                          color: const Color(UIConstants.accentColor).withOpacity(0.3),
-                        ),
-                      ),
-                    ),
-                    icon: const Icon(Icons.network_check, size: 18),
-                    label: const Text(
-                      '测试 TTS 连接',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: () => _showDebugLogs(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(UIConstants.textSecondaryColor),
-                    side: const BorderSide(color: Color(UIConstants.dividerColor)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: const Icon(Icons.bug_report_outlined, size: 18),
-                  label: const Text('日志'),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  /// AI 配置卡片
-  Widget _buildAIConfigCard(SettingsService settings) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(UIConstants.cardColor),
-        borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        border: Border.all(
-          color: const Color(UIConstants.dividerColor),
-        ),
-      ),
-      child: Column(
-        children: [
-          Obx(() => Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: settings.hasAIConfig.value
-                  ? Colors.green.withOpacity(0.1)
-                  : const Color(UIConstants.accentColor).withOpacity(0.1),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(UIConstants.defaultRadius),
-                topRight: Radius.circular(UIConstants.defaultRadius),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  settings.hasAIConfig.value
-                      ? Icons.check_circle
-                      : Icons.info_outline,
-                  color: settings.hasAIConfig.value
-                      ? Colors.green
-                      : const Color(UIConstants.accentColor),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        settings.hasAIConfig.value ? 'AI 已配置' : 'AI 未配置',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: settings.hasAIConfig.value
-                              ? Colors.green
-                              : const Color(UIConstants.accentColor),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        settings.hasAIConfig.value
-                            ? '可以使用 AI 自动生成诗词功能'
-                            : '配置 API Key 以使用 AI 功能',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(UIConstants.textSecondaryColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          )),
-          
-          ListTile(
-            leading: const Icon(
-              Icons.computer_outlined,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: const Text('AI 提供商'),
-            subtitle: Obx(() => Text(
-              _getProviderDisplayName(settings.aiProvider.value),
-              style: const TextStyle(fontSize: 12),
-            )),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showAIProviderDialog(settings),
-          ),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          ListTile(
-            leading: const Icon(
-              Icons.key_outlined,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: const Text('API Key'),
-            subtitle: Obx(() => Text(
-              settings.aiApiKey.value.isEmpty
-                  ? '未设置'
-                  : '${settings.aiApiKey.value.substring(0, settings.aiApiKey.value.length > 8 ? 8 : settings.aiApiKey.value.length)}****',
-              style: const TextStyle(fontSize: 12),
-            )),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showAIApiKeyDialog(settings),
-          ),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          ListTile(
-            leading: const Icon(
-              Icons.model_training_outlined,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: const Text('模型'),
-            subtitle: Obx(() => Text(
-              settings.aiModel.value.isEmpty ? '未选择' : settings.aiModel.value,
-              style: const TextStyle(fontSize: 12),
-            )),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showAIModelDialog(settings),
-          ),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          // 自定义提示词（展开式）
-          _buildExpandablePromptTile(settings),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          // 高级配置（展开式）
-          _buildExpandableAdvancedTile(settings),
-        ],
-      ),
-    );
-  }
-
-  /// 可展开的自定义提示词配置
-  Widget _buildExpandablePromptTile(SettingsService settings) {
-    return StatefulBuilder(
-      builder: (context, setState) {
-        final controller = TextEditingController(text: settings.customPrompt.value);
-        return ExpansionTile(
-          leading: const Icon(
-            Icons.chat_bubble_outline,
-            color: Color(UIConstants.textSecondaryColor),
-          ),
-          title: const Text('自定义提示词'),
-          subtitle: Obx(() => Text(
-            settings.customPrompt.value.isEmpty ? '使用默认提示词' : '已自定义',
-            style: const TextStyle(fontSize: 12),
-          )),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: controller,
-                    onChanged: (value) => settings.saveCustomPrompt(value.trim()),
-                    decoration: InputDecoration(
-                      hintText: '输入自定义提示词...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    maxLines: 5,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      TextButton.icon(
-                        onPressed: () {
-                          controller.clear();
-                          settings.saveCustomPrompt('');
-                          Get.snackbar(
-                            '已恢复',
-                            '使用默认提示词',
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
-                        },
-                        icon: const Icon(Icons.restore, size: 16),
-                        label: const Text('恢复默认'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-  
-  /// 可展开的高级配置
-  Widget _buildExpandableAdvancedTile(SettingsService settings) {
-    return StatefulBuilder(
-      builder: (context, setState) {
-        final controller = TextEditingController(text: settings.aiApiUrl.value);
-        return ExpansionTile(
-          leading: const Icon(
-            Icons.tune_outlined,
-            color: Color(UIConstants.textSecondaryColor),
-          ),
-          title: const Text('高级配置'),
-          subtitle: const Text(
-            '查看和修改 API 地址',
-            style: TextStyle(fontSize: 12),
-          ),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: controller,
-                    onChanged: (value) => settings.saveAIApiUrl(value.trim()),
-                    decoration: InputDecoration(
-                      labelText: 'API 地址',
-                      hintText: '输入 API 地址',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      TextButton.icon(
-                        onPressed: () {
-                          controller.clear();
-                          settings.saveAIApiUrl('');
-                          Get.snackbar(
-                            '已恢复',
-                            '使用默认 API 地址',
-                            snackPosition: SnackPosition.BOTTOM,
-                          );
-                        },
-                        icon: const Icon(Icons.restore, size: 16),
-                        label: const Text('恢复默认'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// 缓存管理卡片
-  Widget _buildCacheCard() {
-    final ttsService = TtsService();
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(UIConstants.cardColor),
-        borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        border: Border.all(
-          color: const Color(UIConstants.dividerColor),
-        ),
-      ),
-      child: Column(
-        children: [
-          FutureBuilder<double>(
-            future: ttsService.getCacheSize(),
-            builder: (context, snapshot) {
-              final size = snapshot.data ?? 0.0;
-              return ListTile(
-                leading: const Icon(
-                  Icons.storage_outlined,
-                  color: Color(UIConstants.textSecondaryColor),
-                ),
-                title: const Text('音频缓存'),
-                subtitle: Text(
-                  '已占用 ${size.toStringAsFixed(2)} MB',
-                  style: const TextStyle(fontSize: 12),
-                ),
-                trailing: size > 0
-                    ? TextButton(
-                        onPressed: () => _showClearCacheConfirm(ttsService),
-                        child: const Text('清除'),
-                      )
-                    : null,
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 关于卡片
-  Widget _buildAboutCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(UIConstants.cardColor),
-        borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        border: Border.all(
-          color: const Color(UIConstants.dividerColor),
-        ),
-      ),
-      child: Column(
-        children: [
-          // 版本信息（展开式）
-          ExpansionTile(
-            leading: const Icon(
-              Icons.info_outline,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: const Text('应用版本'),
-            subtitle: Text(
-              '${Changelog.currentVersion} (${Changelog.currentDate})',
-              style: const TextStyle(fontSize: 12),
-            ),
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '当前版本更新内容：',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...Changelog.currentChanges.map((change) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        change,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    )),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () => _showFullChangelog(),
-                      child: const Text('查看完整更新记录'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          // 作者信息
-          const ListTile(
-            leading: Icon(
-              Icons.person_outline,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: Text('作者'),
-            subtitle: Text(
-              'wong · 给宝贝儿子桐桐',
-              style: TextStyle(fontSize: 12),
-            ),
-          ),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          // 检查更新
-          ListTile(
-            leading: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: const Color(UIConstants.accentColor),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.system_update,
-                color: Colors.white,
-                size: 16,
-              ),
-            ),
-            title: const Text('检查更新'),
-            subtitle: Obx(() => Text(
-              UpdateService.to.isChecking.value 
-                  ? '检查中...' 
-                  : '点击检查最新版本',
-              style: const TextStyle(fontSize: 12),
-            )),
-            trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-            onTap: () => UpdateService.to.checkUpdate(isManual: true),
-          ),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          // GitHub 仓库
-          ListTile(
-            leading: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.code,
-                color: Colors.white,
-                size: 16,
-              ),
-            ),
-            title: const Text('GitHub 仓库'),
-            subtitle: const Text(
-              'github.com/Inna0915/Classical-Chinese-recitation-App',
-              style: TextStyle(fontSize: 11),
-            ),
-            trailing: const Icon(Icons.open_in_new, size: 18),
-            onTap: () async {
-              const url = 'https://github.com/Inna0915/Classical-Chinese-recitation-App';
-              await Clipboard.setData(const ClipboardData(text: url));
-              Get.snackbar(
-                '已复制',
-                '仓库地址已复制到剪贴板',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-          ),
-          
-          const Divider(height: 1, indent: 16, endIndent: 16),
-          
-          ListTile(
-            leading: const Icon(
-              Icons.description_outlined,
-              color: Color(UIConstants.textSecondaryColor),
-            ),
-            title: const Text('开源协议'),
-            subtitle: const Text(
-              'MIT License',
-              style: TextStyle(fontSize: 12),
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _showLicenseDialog(),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  /// 显示完整更新记录
-  void _showFullChangelog() {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          '更新记录',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
-          ),
-        ),
         content: SizedBox(
           width: double.maxFinite,
-          height: MediaQuery.of(Get.context!).size.height * 0.6,
           child: ListView.builder(
-            itemCount: Changelog.versions.length,
+            shrinkWrap: true,
+            itemCount: AIModels.providers.keys.length,
             itemBuilder: (context, index) {
-              final version = Changelog.versions[index];
-              return ExpansionTile(
-                title: Text('${version.version} (${version.date})'),
-                children: version.changes.map((change) => ListTile(
-                  dense: true,
-                  leading: const SizedBox(width: 24),
-                  title: Text(
-                    change,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                )).toList(),
+              final providerKey = AIModels.providers.keys.elementAt(index);
+              final provider = AIModels.providers[providerKey]!;
+              final isSelected = settingsService.aiProvider.value == providerKey;
+              
+              return ListTile(
+                title: Text(provider.name),
+                subtitle: Text(provider.models.join(', ')),
+                trailing: isSelected 
+                    ? const Icon(Icons.check, color: Color(UIConstants.accentColor))
+                    : null,
+                onTap: () {
+                  settingsService.saveAIProvider(providerKey);
+                  Get.back();
+                },
               );
             },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('关闭'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== 对话框方法 ====================
-
-  /// 显示音色选择对话框 - 使用正确的音色列表
-  void _showVoiceTypeDialog(SettingsService settings) {
-    final allVoices = TtsVoices.getAllVoices();
-    final customVoices = TtsVoices.getCustomVoices();
-    
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              '选择朗读音色',
-              style: TextStyle(
-                fontFamily: FontConstants.chineseSerif,
-                color: Color(UIConstants.textPrimaryColor),
-              ),
-            ),
-            TextButton.icon(
-              onPressed: () => _showAddCustomVoiceDialog(settings),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('自定义'),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: MediaQuery.of(Get.context!).size.height * 0.5,
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              // 预设音色
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  '预设音色',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Color(UIConstants.textSecondaryColor),
-                  ),
-                ),
-              ),
-              ...TtsVoice1.voices.map((voice) => _buildVoiceTile(voice, settings, '1.0')),
-              ...TtsVoice2.voices.map((voice) => _buildVoiceTile(voice, settings, '2.0')),
-              
-              // 自定义音色
-              if (customVoices.isNotEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Text(
-                    '自定义音色',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Color(UIConstants.textSecondaryColor),
-                    ),
-                  ),
-                ),
-                ...customVoices.map((voice) => _buildCustomVoiceTile(voice, settings)),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildVoiceTile(dynamic voice, SettingsService settings, String version) {
-    final isV2 = version == '2.0';
-    
-    return Obx(() => RadioListTile<String>(
-      title: Row(
-        children: [
-          Text(voice.displayName),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: isV2 
-                  ? const Color(UIConstants.accentColor).withOpacity(0.2)
-                  : Colors.grey.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              'Doubao $version',
-              style: TextStyle(
-                fontSize: 10,
-                color: isV2 
-                    ? const Color(UIConstants.accentColor)
-                    : Colors.grey,
-              ),
-            ),
-          ),
-        ],
-      ),
-      subtitle: Text(
-        voice.description,
-        style: const TextStyle(fontSize: 11),
-      ),
-      value: voice.voiceType,
-      groupValue: settings.voiceType.value,
-      activeColor: const Color(UIConstants.accentColor),
-      onChanged: (value) {
-        if (value != null) {
-          settings.saveVoiceType(value);
-          // 同步更新 TtsService 中的音色
-          TtsService().setVoiceType(value);
-          Get.back();
-        }
-      },
-    ));
-  }
-  
-  Widget _buildCustomVoiceTile(CustomVoice voice, SettingsService settings) {
-    return Obx(() => RadioListTile<String>(
-      title: Row(
-        children: [
-          Text(voice.displayName),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.purple.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: const Text(
-              '自定义',
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.purple,
-              ),
-            ),
-          ),
-        ],
-      ),
-      subtitle: Text(
-        voice.description,
-        style: const TextStyle(fontSize: 11),
-      ),
-      value: voice.voiceType,
-      groupValue: settings.voiceType.value,
-      activeColor: const Color(UIConstants.accentColor),
-      secondary: IconButton(
-        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-        onPressed: () async {
-          await TtsVoices.removeCustomVoice(voice.voiceType);
-          Get.back();
-          _showVoiceTypeDialog(settings);
-          Get.snackbar(
-            '已删除',
-            '自定义音色已删除',
-            snackPosition: SnackPosition.BOTTOM,
-          );
-        },
-      ),
-      onChanged: (value) {
-        if (value != null) {
-          settings.saveVoiceType(value);
-          // 同步更新 TtsService 中的音色
-          TtsService().setVoiceType(value);
-          Get.back();
-        }
-      },
-    ));
-  }
-  
-  void _showAddCustomVoiceDialog(SettingsService settings) {
-    final voiceTypeController = TextEditingController();
-    final displayNameController = TextEditingController();
-    final descriptionController = TextEditingController();
-    final selectedVersion = '1.0'.obs;
-    final selectedGender = 'female'.obs;
-    
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          '添加自定义音色',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: voiceTypeController,
-                decoration: InputDecoration(
-                  labelText: '音色ID',
-                  hintText: '如: BV001_streaming',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: displayNameController,
-                decoration: InputDecoration(
-                  labelText: '显示名称',
-                  hintText: '如: 我的音色',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: descriptionController,
-                decoration: InputDecoration(
-                  labelText: '描述',
-                  hintText: '音色描述...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Obx(() => DropdownButtonFormField<String>(
-                value: selectedVersion.value,
-                decoration: InputDecoration(
-                  labelText: 'API 版本',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                items: const [
-                  DropdownMenuItem(value: '1.0', child: Text('Doubao 1.0')),
-                  DropdownMenuItem(value: '2.0', child: Text('Doubao 2.0')),
-                ],
-                onChanged: (value) => selectedVersion.value = value!,
-              )),
-              const SizedBox(height: 12),
-              Obx(() => DropdownButtonFormField<String>(
-                value: selectedGender.value,
-                decoration: InputDecoration(
-                  labelText: '性别',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'female', child: Text('女声')),
-                  DropdownMenuItem(value: 'male', child: Text('男声')),
-                ],
-                onChanged: (value) => selectedGender.value = value!,
-              )),
-            ],
           ),
         ),
         actions: [
@@ -999,304 +207,109 @@ class _SettingsPageState extends State<SettingsPage> {
             onPressed: () => Get.back(),
             child: const Text('取消'),
           ),
-          ElevatedButton(
-            onPressed: () async {
-              if (voiceTypeController.text.isEmpty || 
-                  displayNameController.text.isEmpty) {
-                Get.snackbar(
-                  '错误',
-                  '请填写音色ID和显示名称',
-                  snackPosition: SnackPosition.BOTTOM,
-                  backgroundColor: Colors.red,
-                  colorText: Colors.white,
-                );
-                return;
-              }
-              
-              final voice = CustomVoice(
-                voiceType: voiceTypeController.text.trim(),
-                displayName: displayNameController.text.trim(),
-                gender: selectedGender.value,
-                description: descriptionController.text.trim(),
-                version: selectedVersion.value,
-              );
-              
-              await TtsVoices.addCustomVoice(voice);
-              Get.back();
-              Get.back();
-              _showVoiceTypeDialog(settings);
-              
-              Get.snackbar(
-                '已添加',
-                '自定义音色已保存',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(UIConstants.accentColor),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('添加'),
-          ),
         ],
       ),
     );
   }
 
-  /// 测试 TTS 连接
-  void _testTTSConnection() async {
-    final ttsService = TtsService();
-    final settings = SettingsService.to;
-    
-    // 确保音色设置已同步
-    ttsService.setVoiceType(settings.voiceType.value);
-    
-    Get.dialog(
-      const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 20),
-            Text('正在测试连接...'),
-          ],
-        ),
-      ),
-      barrierDismissible: false,
-    );
-    
-    final result = await ttsService.testConnection();
-    
-    Get.back(); // 关闭加载对话框
-    
-    if (result.isSuccess) {
-      Get.dialog(
-        AlertDialog(
-          backgroundColor: const Color(UIConstants.cardColor),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-          ),
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 8),
-              Text('连接成功'),
-            ],
-          ),
-          content: const Text(
-            'TTS 服务连接正常，可以正常使用朗读功能。',
-            style: TextStyle(color: Color(UIConstants.textSecondaryColor)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Get.back();
-                // 延迟打开日志，避免动画冲突
-                Future.delayed(const Duration(milliseconds: 200), () {
-                  _showDebugLogs();
-                });
-              },
-              child: const Text('查看日志'),
-            ),
-            ElevatedButton(
-              onPressed: () => Get.back(),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      );
-    } else {
-      Get.dialog(
-        AlertDialog(
-          backgroundColor: const Color(UIConstants.cardColor),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-          ),
-          title: Row(
-            children: [
-              Icon(
-                Icons.error_outline,
-                color: result.statusCode == 401 ? Colors.orange : Colors.red,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                result.statusCode == 401 ? '认证失败' : '连接失败',
-                style: TextStyle(
-                  color: result.statusCode == 401 ? Colors.orange : Colors.red,
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            result.errorMessage ?? '未知错误',
-            style: const TextStyle(color: Color(UIConstants.textSecondaryColor)),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Get.back();
-                Future.delayed(const Duration(milliseconds: 200), () {
-                  _showDebugLogs();
-                });
-              },
-              child: const Text('查看日志'),
-            ),
-            ElevatedButton(
-              onPressed: () => Get.back(),
-              child: const Text('确定'),
-            ),
-          ],
-        ),
-      );
-    }
-  }
+  // ==================== TTS 配置对话框 ====================
 
-  /// 显示调试日志
-  void _showDebugLogs() {
-    final ttsService = TtsService();
-    
+  void _showTTSConfigDialog() {
     Get.bottomSheet(
       Container(
-        padding: const EdgeInsets.all(UIConstants.defaultPadding),
         decoration: const BoxDecoration(
           color: Color(UIConstants.cardColor),
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(UIConstants.defaultRadius),
-          ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(UIConstants.defaultRadius)),
         ),
         child: SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'TTS 调试日志',
-                    style: TextStyle(
-                      fontFamily: FontConstants.chineseSerif,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () {
-                      ttsService.clearDebugLogs();
-                      Get.back();
-                      Get.snackbar(
-                        '已清除',
-                        '调试日志已清空',
-                        snackPosition: SnackPosition.BOTTOM,
-                      );
-                    },
-                    icon: const Icon(Icons.clear_all, size: 18),
-                    label: const Text('清空'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: Obx(() {
-                  final logs = ttsService.debugLogs;
-                  return logs.isEmpty
-                      ? const Center(
-                          child: Text(
-                            '暂无日志',
-                            style: TextStyle(
-                              color: Color(UIConstants.textSecondaryColor),
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: logs.length,
-                          itemBuilder: (context, index) {
-                            final log = logs[logs.length - 1 - index];
-                            Color logColor;
-                            IconData logIcon;
-                            
-                            switch (log.type) {
-                              case 'request':
-                                logColor = Colors.blue;
-                                logIcon = Icons.send;
-                                break;
-                              case 'response':
-                                logColor = Colors.green;
-                                logIcon = Icons.check_circle;
-                                break;
-                              case 'error':
-                                logColor = Colors.red;
-                                logIcon = Icons.error;
-                                break;
-                              default:
-                                logColor = Colors.grey;
-                                logIcon = Icons.info;
-                            }
-                            
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ExpansionTile(
-                                leading: Icon(logIcon, color: logColor, size: 20),
-                                title: Text(
-                                  log.title,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: logColor,
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  '${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}:${log.timestamp.second.toString().padLeft(2, '0')}',
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                trailing: IconButton(
-                                  icon: const Icon(Icons.copy, size: 18),
-                                  tooltip: '复制此日志',
-                                  onPressed: () {
-                                    Clipboard.setData(ClipboardData(text: 
-                                      '[${log.type.toUpperCase()}] ${log.title}\n'
-                                      '时间: ${log.timestamp.toString()}\n'
-                                      '\n${log.content}'
-                                    ));
-                                    Get.snackbar(
-                                      '已复制',
-                                      '日志内容已复制到剪贴板',
-                                      snackPosition: SnackPosition.BOTTOM,
-                                      duration: const Duration(seconds: 1),
-                                    );
-                                  },
-                                ),
-                                children: [
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(12),
-                                    color: Colors.grey.shade100,
-                                    child: SelectableText(
-                                      log.content,
-                                      style: const TextStyle(
-                                        fontFamily: 'monospace',
-                                        fontSize: 11,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        );
-                }),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () => Get.back(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(UIConstants.accentColor),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('关闭'),
+              // 拖动指示条
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
+              
+              // 标题
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    const Text(
+                      'TTS 服务配置',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: () => _showResetConfirmDialog(),
+                      child: const Text(
+                        '重置',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const Divider(height: 1),
+              
+              // 音色选择
+              ListTile(
+                leading: const Icon(Icons.person_outline),
+                title: const Text('当前音色'),
+                subtitle: Obx(() => Text(
+                  TtsVoices.getDisplayName(settingsService.voiceType.value),
+                )),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showVoiceSelector(),
+              ),
+              
+              const Divider(height: 1, indent: 56),
+              
+              // 语速调节
+              Obx(() => ListTile(
+                leading: const Icon(Icons.speed),
+                title: const Text('语速'),
+                subtitle: Slider(
+                  value: settingsService.speechRate.value.toDouble(),
+                  min: -50,
+                  max: 100,
+                  divisions: 30,
+                  label: settingsService.speechRate.value.toString(),
+                  onChanged: (value) {
+                    settingsService.saveSpeechRate(value.round());
+                  },
+                ),
+              )),
+              
+              const Divider(height: 1, indent: 56),
+              
+              // 音量调节
+              Obx(() => ListTile(
+                leading: const Icon(Icons.volume_up),
+                title: const Text('音量'),
+                subtitle: Slider(
+                  value: settingsService.loudnessRate.value.toDouble(),
+                  min: -50,
+                  max: 100,
+                  divisions: 30,
+                  label: settingsService.loudnessRate.value.toString(),
+                  onChanged: (value) {
+                    settingsService.saveLoudnessRate(value.round());
+                  },
+                ),
+              )),
+              
+              const SizedBox(height: 16),
             ],
           ),
         ),
@@ -1305,374 +318,202 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  /// 显示 TTS 配置对话框
-  void _showTtsConfigDialog() {
-    final ttsService = TtsService();
-    final appIdController = TextEditingController(text: ttsService.appId);
-    final accessKeyController = TextEditingController(text: ttsService.accessToken);
-    final isKeyVisible = false.obs;
+  void _showVoiceSelector() {
+    final voices = TtsVoices.getAllVoices();
     
+    Get.to(() => Scaffold(
+      appBar: AppBar(
+        title: const Text('选择音色'),
+        backgroundColor: const Color(UIConstants.backgroundColor),
+      ),
+      body: ListView.builder(
+        itemCount: voices.length,
+        itemBuilder: (context, index) {
+          final voice = voices[index];
+          final isSelected = settingsService.voiceType.value == voice.voiceType;
+          
+          return ListTile(
+            title: Text(voice.displayName),
+            subtitle: Text(voice.description),
+            trailing: isSelected 
+                ? const Icon(Icons.check, color: Color(UIConstants.accentColor))
+                : null,
+            onTap: () {
+              settingsService.saveVoiceType(voice.voiceType);
+              Get.back();
+            },
+          );
+        },
+      ),
+    ));
+  }
+
+  void _showResetConfirmDialog() {
     Get.dialog(
       AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          'TTS 内置配置',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(Get.context!).size.width * 0.9,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '修改后将用于语音合成请求',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(UIConstants.textSecondaryColor),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: appIdController,
-                  decoration: InputDecoration(
-                    labelText: 'APP ID',
-                    hintText: '输入火山引擎 APP ID',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Obx(() => TextField(
-                  controller: accessKeyController,
-                  decoration: InputDecoration(
-                    labelText: 'Access Key',
-                    hintText: '输入火山引擎 Access Key',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        isKeyVisible.value ? Icons.visibility_off : Icons.visibility,
-                        size: 20,
-                        color: const Color(UIConstants.textSecondaryColor),
-                      ),
-                      onPressed: () => isKeyVisible.toggle(),
-                    ),
-                  ),
-                  obscureText: !isKeyVisible.value,
-                )),
-                const SizedBox(height: 8),
-                const Text(
-                  '注：默认使用内置配置，仅在需要更换时修改',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Color(UIConstants.textSecondaryColor),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+        title: const Text('重置 TTS 配置'),
+        content: const Text('确定要将所有 TTS 设置恢复为默认值吗？'),
         actions: [
-          TextButton(
-            onPressed: () {
-              // 恢复默认配置
-              appIdController.text = TtsConstants.appId;
-              accessKeyController.text = TtsConstants.accessToken;
-            },
-            child: const Text('恢复默认'),
-          ),
           TextButton(
             onPressed: () => Get.back(),
             child: const Text('取消'),
           ),
           ElevatedButton(
             onPressed: () {
-              ttsService.setCredentials(
-                appIdController.text.trim(),
-                accessKeyController.text.trim(),
-              );
+              settingsService.resetTtsConfig();
+              Get.back();
               Get.back();
               Get.snackbar(
-                '已保存',
-                'TTS 配置已更新',
+                '重置成功',
+                'TTS 配置已恢复为默认值',
                 snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(UIConstants.accentColor),
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 显示清除缓存确认
-  void _showClearCacheConfirm(TtsService ttsService) {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          '清除缓存',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
-          ),
-        ),
-        content: const Text(
-          '确定要清除所有音频缓存吗？此操作不可恢复。',
-          style: TextStyle(
-            color: Color(UIConstants.textSecondaryColor),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text(
-              '取消',
-              style: TextStyle(
-                color: Color(UIConstants.textSecondaryColor),
-              ),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await ttsService.clearAllAudioCache();
-              PoemController.to.loadPoems();
-              Get.back();
-              Get.snackbar(
-                '成功',
-                '缓存已清除',
-                snackPosition: SnackPosition.TOP,
-                backgroundColor: Colors.green,
-                colorText: Colors.white,
               );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
             ),
-            child: const Text('清除'),
+            child: const Text('重置'),
           ),
         ],
       ),
     );
   }
 
-  // ==================== AI 配置对话框 ====================
+  // ==================== 关于对话框 ====================
 
-  String _getProviderDisplayName(String provider) {
-    final names = {
-      'kimi': 'Kimi (Moonshot)',
-      'deepseek': 'DeepSeek',
-      'qwen': '通义千问',
-      'gemini': 'Gemini',
-      'openai': 'OpenAI',
-      'custom': '自定义',
-    };
-    return names[provider] ?? provider;
-  }
-
-  void _showAIProviderDialog(SettingsService settings) {
-    final providers = ['kimi', 'deepseek', 'qwen', 'gemini', 'openai', 'custom'];
-    
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          '选择 AI 提供商',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: providers.map((provider) {
-            return Obx(() => RadioListTile<String>(
-              title: Text(_getProviderDisplayName(provider)),
-              value: provider,
-              groupValue: settings.aiProvider.value,
-              activeColor: const Color(UIConstants.accentColor),
-              onChanged: (value) {
-                if (value != null) {
-                  settings.saveAIProvider(value);
-                  Get.back();
-                }
-              },
-            ));
-          }).toList(),
-        ),
+  void _showAboutDialog() {
+    Get.to(() => Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF5F5F5),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text('关于'),
       ),
-    );
-  }
-
-  void _showAIApiKeyDialog(SettingsService settings) {
-    final controller = TextEditingController(text: settings.aiApiKey.value);
-    final isKeyVisible = false.obs;
-    
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          '设置 API Key',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
-          ),
-        ),
-        content: Obx(() => TextField(
-          controller: controller,
-          obscureText: !isKeyVisible.value,
-          decoration: InputDecoration(
-            hintText: '输入 API Key',
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // 应用图标和名称
+          Center(
+            child: Column(
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: const Color(UIConstants.accentColor),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(
+                    Icons.menu_book,
+                    size: 40,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '古韵诵读',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '版本 v$_version',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
             ),
-            suffixIcon: IconButton(
-              icon: Icon(
-                isKeyVisible.value ? Icons.visibility_off : Icons.visibility,
-                size: 20,
-                color: const Color(UIConstants.textSecondaryColor),
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // 检查更新
+          SettingsSection(
+            children: [
+              SettingsTile(
+                icon: Icons.system_update,
+                iconBackgroundColor: const Color(0xFFE8F5E9),
+                iconColor: const Color(0xFF4CAF50),
+                title: '检查更新',
+                trailing: SettingsTileTrailing.arrow,
+                onTap: () => UpdateService.to.checkUpdate(isManual: true),
               ),
-              onPressed: () => isKeyVisible.toggle(),
-            ),
+            ],
           ),
-        )),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消'),
+          
+          const SizedBox(height: 16),
+          
+          // 更新日志
+          SettingsSection(
+            title: '更新记录',
+            children: [
+              for (final version in Changelog.versions)
+                SettingsTile(
+                  title: '${version.version} (${version.date})',
+                  subtitle: version.changes.take(2).join('\n'),
+                  trailing: SettingsTileTrailing.none,
+                  onTap: () => _showVersionDetail(version),
+                ),
+            ],
           ),
-          ElevatedButton(
-            onPressed: () {
-              settings.saveAIApiKey(controller.text.trim());
-              Get.back();
-              Get.snackbar(
-                '已保存',
-                'API Key 已更新',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(UIConstants.accentColor),
-              foregroundColor: Colors.white,
+          
+          const SizedBox(height: 16),
+          
+          // 作者信息
+          SettingsSection(
+            children: [
+              const SettingsTile(
+                icon: Icons.person_outline,
+                iconBackgroundColor: Color(0xFFFCE4EC),
+                iconColor: Color(0xFFE91E63),
+                title: '作者',
+                trailing: SettingsTileTrailing.text,
+                trailingText: 'wong',
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // 版权信息
+          Center(
+            child: Text(
+              '© 2025 古韵诵读 · 给宝贝儿子桐桐',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[400],
+              ),
             ),
-            child: const Text('保存'),
           ),
         ],
       ),
-    );
+    ));
   }
 
-  void _showAIModelDialog(SettingsService settings) {
-    final provider = settings.aiProvider.value;
-    final config = AIModels.providers[provider];
-    
-    if (config == null) return;
-    
+  void _showVersionDetail(VersionInfo version) {
     Get.dialog(
       AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          '选择模型',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: config.models.map((model) {
-            return Obx(() => RadioListTile<String>(
-              title: Text(model),
-              value: model,
-              groupValue: settings.aiModel.value,
-              activeColor: const Color(UIConstants.accentColor),
-              onChanged: (value) {
-                if (value != null) {
-                  settings.saveAIModel(value);
-                  Get.back();
-                }
-              },
-            ));
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  void _showLicenseDialog() {
-    Get.dialog(
-      AlertDialog(
-        backgroundColor: const Color(UIConstants.cardColor),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(UIConstants.defaultRadius),
-        ),
-        title: const Text(
-          '开源协议',
-          style: TextStyle(
-            fontFamily: FontConstants.chineseSerif,
-            color: Color(UIConstants.textPrimaryColor),
-          ),
-        ),
-        content: const SingleChildScrollView(
-          child: Text(
-            '''MIT License
-
-Copyright (c) 2024 GuYunReader
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.''',
-            style: TextStyle(fontSize: 12),
+        title: Text('${version.version} 更新内容'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: version.changes.map((change) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text('• $change'),
+            )).toList(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Get.back(),
-            child: const Text('确定'),
+            child: const Text('关闭'),
           ),
         ],
       ),
