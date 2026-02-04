@@ -1,9 +1,23 @@
 /// 应用更新记录
 class Changelog {
-  static const String currentVersion = 'v1.7.1';
+  static const String currentVersion = 'v2.0.0';
   static const String currentDate = '2026-02-04';
   
   static const List<VersionInfo> versions = [
+    VersionInfo(
+      version: 'v2.0.0',
+      date: '2026-02-04',
+      changes: [
+        '🏗️ 架构重构：从层级分组升级为标签+歌单模式',
+        '✨ 新增标签系统：支持多维度分类（古诗/宋词/童话等）',
+        '✨ 新增小集功能：歌单式管理，支持拖拽排序',
+        '✨ 数据驱动初始化：从JSON加载内置诗词数据',
+        '🔧 新增 BookshelfPage：Cherry Studio风格书架页',
+        '🔧 新增 CollectionsPage：小集/歌单管理页面',
+        '📊 新数据库架构：5张表（poems/tags/poem_tags/collections/collection_poems）',
+        '🎯 播放上下文：支持标签/小集/收藏等多种播放模式',
+      ],
+    ),
     VersionInfo(
       version: 'v1.7.1',
       date: '2026-02-04',
