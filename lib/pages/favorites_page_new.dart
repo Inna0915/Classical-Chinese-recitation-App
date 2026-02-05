@@ -40,7 +40,7 @@ class _FavoritesPageNewState extends State<FavoritesPageNew> {
     return Scaffold(
       backgroundColor: context.backgroundColor,
       appBar: AppBar(
-        title: const Text('我的收藏'),
+        title: const Text('收藏'),
         elevation: 0,
       ),
       body: Column(

@@ -12,6 +12,7 @@ import '../services/update_service.dart';
 import '../widgets/dialogs/app_dialog.dart';
 import '../widgets/settings/index.dart';
 import 'settings/llm_config_page.dart';
+import 'settings/theme_color_page.dart';
 import 'settings/tts_config_page.dart';
 
 /// 设置页面 - Cherry Studio / iOS 风格重构
@@ -131,7 +132,7 @@ class _SettingsPageState extends State<SettingsPage> {
               border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
             ),
           ),
-          onTap: () => _showColorPicker(),
+          onTap: () => Get.to(() => const ThemeColorPage()),
         ),
         
         // 深色模式选择
@@ -176,10 +177,15 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
   
-  /// 显示颜色选择器
+  /// 显示颜色选择器（重构版：每行2个，左侧长方形+色号+中文名）
   void _showColorPicker() {
     final colors = TraditionalChineseColors.allColors;
     final names = ['朱砂', '竹青', '黛蓝', '栀子', '暮山紫', '玄青', '靛蓝', '橘橙', '翠绿', '紫罗兰'];
+    
+    // 颜色值转十六进制字符串
+    String colorToHex(Color color) {
+      return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+    }
     
     Get.bottomSheet(
       Container(
@@ -210,63 +216,108 @@ class _SettingsPageState extends State<SettingsPage> {
                   color: context.textPrimaryColor,
                 ),
               ),
-              const SizedBox(height: 24),
-              // 颜色选项
-              Wrap(
-                spacing: 20,
-                runSpacing: 20,
-                alignment: WrapAlignment.center,
-                children: List.generate(colors.length, (index) {
-                  final color = colors[index];
-                  final name = names[index];
-                  final isSelected = settingsService.primaryColor.value == color;
-                  
-                  return GestureDetector(
-                    onTap: () {
-                      settingsService.savePrimaryColor(color);
-                      Get.back();
-                    },
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 56,
-                          height: 56,
-                          decoration: BoxDecoration(
-                            color: color,
-                            borderRadius: BorderRadius.circular(28),
-                            border: isSelected
-                                ? Border.all(color: context.textPrimaryColor, width: 3)
-                                : null,
-                            boxShadow: [
-                              BoxShadow(
-                                color: color.withValues(alpha: 0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+              const SizedBox(height: 16),
+              // 颜色选项 - 每行2个
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: List.generate((colors.length / 2).ceil(), (rowIndex) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          // 第一个颜色
+                          Expanded(
+                            child: _buildColorItem(
+                              colors[rowIndex * 2],
+                              names[rowIndex * 2],
+                              colorToHex(colors[rowIndex * 2]),
+                            ),
                           ),
-                          child: isSelected
-                              ? const Icon(Icons.check, color: Colors.white, size: 28)
-                              : null,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          name,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: isSelected ? color : context.textSecondaryColor,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          const SizedBox(width: 12),
+                          // 第二个颜色（如果存在）
+                          Expanded(
+                            child: (rowIndex * 2 + 1) < colors.length
+                                ? _buildColorItem(
+                                    colors[rowIndex * 2 + 1],
+                                    names[rowIndex * 2 + 1],
+                                    colorToHex(colors[rowIndex * 2 + 1]),
+                                  )
+                                : const SizedBox(),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
             ],
           ),
+        ),
+      ),
+    );
+  }
+  
+  /// 构建颜色选项项（左侧长方形+色号+中文名）
+  Widget _buildColorItem(Color color, String name, String hexCode) {
+    final isSelected = settingsService.primaryColor.value == color;
+    
+    return GestureDetector(
+      onTap: () {
+        settingsService.savePrimaryColor(color);
+        Get.back();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: context.backgroundColor,
+          borderRadius: BorderRadius.circular(8),
+          border: isSelected
+              ? Border.all(color: color, width: 2)
+              : Border.all(color: context.dividerColor),
+        ),
+        child: Row(
+          children: [
+            // 左侧长方形颜色块
+            Container(
+              width: 48,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // 中间色号
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    hexCode,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'monospace',
+                      color: context.textSecondaryColor,
+                    ),
+                  ),
+                  // 右侧中文名
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      color: isSelected ? color : context.textPrimaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 选中标记
+            if (isSelected)
+              Icon(Icons.check_circle, color: color, size: 20),
+          ],
         ),
       ),
     );

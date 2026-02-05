@@ -6,7 +6,7 @@ import '../controllers/player_controller.dart';
 import '../controllers/poem_controller.dart';
 import '../models/enums.dart';
 import '../models/poem_new.dart';
-import '../pages/poem_detail_page.dart';
+import '../pages/poem_detail_page_new.dart';
 
 /// 迷你播放控制条 - 悬浮在底部导航栏上方
 /// 参考 QQ 音乐设计风格，古风元素适配
@@ -22,9 +22,9 @@ class MiniPlayerWidget extends StatelessWidget {
       final isPlaying = controller.playbackState.value == PlaybackState.playing;
       final isLoading = controller.playbackState.value == PlaybackState.loading;
       
-      // 如果没有播放任务，隐藏
+      // 永久展示，无播放任务时显示占位状态
       if (poem == null) {
-        return const SizedBox.shrink();
+        return _buildEmptyPlayer(context);
       }
 
       // 手势检测：左右滑动切换上一首/下一首
@@ -63,7 +63,7 @@ class MiniPlayerWidget extends StatelessWidget {
               // 中间：诗词信息
               Expanded(
                 child: GestureDetector(
-                  onTap: () => Get.to(() => const PoemDetailPage()),
+                  onTap: () => _openPoemDetail(poem),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     child: Column(
@@ -109,10 +109,113 @@ class MiniPlayerWidget extends StatelessWidget {
     });
   }
 
+  /// 空播放器状态（无播放任务时展示）
+  Widget _buildEmptyPlayer(BuildContext context) {
+    return Container(
+      height: 64,
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+        border: Border(
+          top: BorderSide(
+            color: context.dividerColor,
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          // 左侧占位图标
+          Container(
+            width: 48,
+            height: 48,
+            margin: const EdgeInsets.only(left: 12),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: context.dividerColor.withValues(alpha: 0.5),
+            ),
+            child: Icon(
+              Icons.music_note,
+              color: context.textSecondaryColor.withValues(alpha: 0.5),
+              size: 24,
+            ),
+          ),
+          
+          // 中间提示文本
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                '点击文章开始朗读',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: context.textSecondaryColor.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+          ),
+          
+          // 右侧占位按钮
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.skip_previous,
+                  color: context.textSecondaryColor.withValues(alpha: 0.3),
+                  size: 24,
+                ),
+                onPressed: null,
+              ),
+              Container(
+                width: 44,
+                height: 44,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: context.dividerColor.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.play_arrow,
+                  color: context.textSecondaryColor.withValues(alpha: 0.3),
+                  size: 22,
+                ),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.skip_next,
+                  color: context.textSecondaryColor.withValues(alpha: 0.3),
+                  size: 24,
+                ),
+                onPressed: null,
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.queue_music,
+                  color: context.textSecondaryColor.withValues(alpha: 0.3),
+                  size: 24,
+                ),
+                onPressed: null,
+              ),
+            ],
+          ),
+          
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+
   /// 左侧意境图/旋转图标
   Widget _buildLeadingIcon(BuildContext context, Poem poem, bool isPlaying) {
     return GestureDetector(
-      onTap: () => Get.to(() => const PoemDetailPage()),
+      onTap: () => _openPoemDetail(poem),
       child: Container(
         width: 48,
         height: 48,
@@ -141,6 +244,12 @@ class MiniPlayerWidget extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 打开诗词详情页
+  void _openPoemDetail(Poem poem) {
+    // 使用 poemId 导航到详情页，确保显示正确的诗词
+    Get.to(() => PoemDetailPageNew(poemId: poem.id!));
   }
 
   /// 右侧控制按钮组

@@ -33,7 +33,7 @@ class SettingsService extends GetxService {
   
   // ==================== 外观 Observable 配置项 ====================
   /// 是否使用系统字体
-  final RxBool useSystemFont = false.obs;
+  final RxBool useSystemFont = true.obs;
   
   /// 当前主题色
   final Rx<Color> primaryColor = TraditionalChineseColors.cinnabar.obs;
@@ -75,7 +75,7 @@ class SettingsService extends GetxService {
   /// 加载设置
   void _loadSettings() {
     // 外观配置
-    useSystemFont.value = _prefs.getBool(_keyUseSystemFont) ?? false;
+    useSystemFont.value = _prefs.getBool(_keyUseSystemFont) ?? true;
     
     // 主题颜色
     final colorValue = _prefs.getInt(_keyPrimaryColor);

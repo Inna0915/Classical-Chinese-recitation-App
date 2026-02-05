@@ -14,8 +14,8 @@ class DatabaseHelper {
   DatabaseHelper._internal();
 
   // 数据库版本（架构变更时递增）
-  static const int _databaseVersion = 2;
-  static const String _databaseName = 'guyun_reader.db';
+  static const int _databaseVersion = 3;
+  static const String _databaseName = 'tongsheng_guyun.db';
 
   // 表名
   static const String _tablePoems = 'poems';
@@ -23,6 +23,7 @@ class DatabaseHelper {
   static const String _tablePoemTags = 'poem_tags';
   static const String _tableCollections = 'collections';
   static const String _tableCollectionPoems = 'collection_poems';
+  static const String _tableVoiceCaches = 'voice_caches';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -84,6 +85,7 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         description TEXT,
         cover_image TEXT,
+        is_pinned INTEGER DEFAULT 0,
         created_at TEXT NOT NULL
       )
     ''');
@@ -106,6 +108,28 @@ class DatabaseHelper {
     await db.execute('CREATE INDEX idx_poem_tags_tag ON $_tablePoemTags(tag_id)');
     await db.execute('CREATE INDEX idx_collection_poems_collection ON $_tableCollectionPoems(collection_id)');
     await db.execute('CREATE INDEX idx_collection_poems_sort ON $_tableCollectionPoems(collection_id, sort_order)');
+    
+    // 创建语音缓存表
+    await _createVoiceCacheTable(db);
+  }
+
+  /// 创建语音缓存表
+  Future<void> _createVoiceCacheTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE $_tableVoiceCaches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        poem_id INTEGER NOT NULL,
+        voice_type TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        timestamp_path TEXT,
+        file_size INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        UNIQUE(poem_id, voice_type),
+        FOREIGN KEY (poem_id) REFERENCES $_tablePoems(id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute('CREATE INDEX idx_voice_caches_poem ON $_tableVoiceCaches(poem_id)');
+    await db.execute('CREATE INDEX idx_voice_caches_voice ON $_tableVoiceCaches(voice_type)');
   }
 
   /// 数据库升级
@@ -117,6 +141,16 @@ class DatabaseHelper {
       
       // 新架构直接重新初始化
       await _onCreate(db, newVersion);
+    }
+    if (oldVersion < 3) {
+      // 仉2迁移到v3：添加语音缓存表和小集置顶字段
+      await _createVoiceCacheTable(db);
+      // 添加小集置顶字段
+      try {
+        await db.execute('ALTER TABLE $_tableCollections ADD COLUMN is_pinned INTEGER DEFAULT 0');
+      } catch (e) {
+        // 字段可能已存在
+      }
     }
   }
 
@@ -399,6 +433,96 @@ class DatabaseHelper {
     return maps.map((map) => Tag.fromMap(map)).toList();
   }
 
+  // ==================== 标签管理操作 ====================
+
+  /// 创建新标签
+  Future<int> createTag(String name) async {
+    final db = await database;
+    try {
+      return await db.insert(_tableTags, {'name': name});
+    } catch (e) {
+      // 标签已存在，返回现有标签ID
+      final existing = await db.query(
+        _tableTags,
+        where: 'name = ?',
+        whereArgs: [name],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) {
+        return existing.first['id'] as int;
+      }
+      rethrow;
+    }
+  }
+
+  /// 更新标签名称
+  Future<void> updateTag(int tagId, String newName) async {
+    final db = await database;
+    await db.update(
+      _tableTags,
+      {'name': newName},
+      where: 'id = ?',
+      whereArgs: [tagId],
+    );
+  }
+
+  /// 删除标签（会自动删除关联的 poem_tags 记录）
+  Future<void> deleteTag(int tagId) async {
+    final db = await database;
+    await db.delete(
+      _tableTags,
+      where: 'id = ?',
+      whereArgs: [tagId],
+    );
+  }
+
+  /// 为诗词添加标签
+  Future<void> addTagToPoem(int poemId, int tagId) async {
+    final db = await database;
+    try {
+      await db.insert(_tablePoemTags, {
+        'poem_id': poemId,
+        'tag_id': tagId,
+      });
+    } catch (e) {
+      // 关联已存在，忽略错误
+    }
+  }
+
+  /// 为诗词移除标签
+  Future<void> removeTagFromPoem(int poemId, int tagId) async {
+    final db = await database;
+    await db.delete(
+      _tablePoemTags,
+      where: 'poem_id = ? AND tag_id = ?',
+      whereArgs: [poemId, tagId],
+    );
+  }
+
+  /// 设置诗词的标签（完全替换）
+  Future<void> setPoemTags(int poemId, List<int> tagIds) async {
+    final db = await database;
+    await db.transaction((txn) async {
+      // 1. 删除现有标签关联
+      await txn.delete(
+        _tablePoemTags,
+        where: 'poem_id = ?',
+        whereArgs: [poemId],
+      );
+      // 2. 添加新标签关联
+      for (final tagId in tagIds) {
+        try {
+          await txn.insert(_tablePoemTags, {
+            'poem_id': poemId,
+            'tag_id': tagId,
+          });
+        } catch (e) {
+          // 忽略重复错误
+        }
+      }
+    });
+  }
+
   // ==================== 小集操作 ====================
 
   /// 获取所有小集（带诗词数量）
@@ -409,7 +533,7 @@ class DatabaseHelper {
       FROM $_tableCollections c
       LEFT JOIN $_tableCollectionPoems cp ON c.id = cp.collection_id
       GROUP BY c.id
-      ORDER BY c.created_at DESC
+      ORDER BY c.is_pinned DESC, c.created_at DESC
     ''');
 
     return maps.map((map) => Collection(
@@ -417,6 +541,7 @@ class DatabaseHelper {
       name: map['name'] as String,
       description: map['description'] as String?,
       coverImage: map['cover_image'] as String?,
+      isPinned: (map['is_pinned'] as int?) == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
       poemCount: map['poem_count'] as int,
     )).toList();
@@ -485,6 +610,17 @@ class DatabaseHelper {
     final db = await database;
     await db.delete(
       _tableCollections,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// 设置小集置顶状态
+  Future<void> setCollectionPinned(int id, bool isPinned) async {
+    final db = await database;
+    await db.update(
+      _tableCollections,
+      {'is_pinned': isPinned ? 1 : 0},
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -627,31 +763,58 @@ class DatabaseHelper {
 
   // toggleFavorite 已在上方定义，此处省略
 
-  /// 获取语音缓存（兼容旧代码 - 返回 null）
+  /// 获取语音缓存
   Future<Map<String, dynamic>?> getVoiceCache(int poemId, String voiceType) async {
-    // TODO: 实现语音缓存表
-    return null;
+    final db = await database;
+    final maps = await db.query(
+      _tableVoiceCaches,
+      where: 'poem_id = ? AND voice_type = ?',
+      whereArgs: [poemId, voiceType],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first;
   }
 
-  /// 保存语音缓存（兼容旧代码 - 空实现）
+  /// 保存语音缓存
   Future<void> saveVoiceCache(Map<String, dynamic> cache) async {
-    // TODO: 实现语音缓存表
+    final db = await database;
+    await db.insert(
+      _tableVoiceCaches,
+      cache,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
-  /// 获取诗词的所有语音缓存（兼容旧代码 - 返回空列表）
+  /// 获取诗词的所有语音缓存
   Future<List<Map<String, dynamic>>> getVoiceCachesForPoem(int poemId) async {
-    // TODO: 实现语音缓存表
-    return [];
+    final db = await database;
+    return await db.query(
+      _tableVoiceCaches,
+      where: 'poem_id = ?',
+      whereArgs: [poemId],
+      orderBy: 'created_at DESC',
+    );
   }
 
-  /// 删除语音缓存（兼容旧代码 - 空实现）
+  /// 删除语音缓存
   Future<void> deleteVoiceCache(int cacheId) async {
-    // TODO: 实现语音缓存表
+    final db = await database;
+    await db.delete(
+      _tableVoiceCaches,
+      where: 'id = ?',
+      whereArgs: [cacheId],
+    );
   }
 
-  /// 删除诗词的所有语音缓存（兼容旧代码 - 空实现）
+  /// 删除诗词的所有语音缓存
   Future<void> deleteAllVoiceCachesForPoem(int poemId) async {
-    // TODO: 实现语音缓存表
+    final db = await database;
+    await db.delete(
+      _tableVoiceCaches,
+      where: 'poem_id = ?',
+      whereArgs: [poemId],
+    );
   }
 
   /// 更新诗词音频路径（兼容旧代码）
@@ -665,21 +828,25 @@ class DatabaseHelper {
     );
   }
 
-  /// 获取所有语音缓存（兼容旧代码 - 返回空列表）
+  /// 获取所有语音缓存
   Future<List<Map<String, dynamic>>> getAllVoiceCaches() async {
-    // TODO: 实现语音缓存表
-    return [];
+    final db = await database;
+    return await db.query(_tableVoiceCaches);
   }
 
-  /// 清除所有语音缓存（兼容旧代码 - 空实现）
+  /// 清除所有语音缓存
   Future<void> clearAllVoiceCaches() async {
-    // TODO: 实现语音缓存表
+    final db = await database;
+    await db.delete(_tableVoiceCaches);
   }
 
-  /// 获取语音缓存大小（兼容旧代码 - 返回 0）
+  /// 获取语音缓存大小
   Future<int> getVoiceCacheSize() async {
-    // TODO: 实现语音缓存表
-    return 0;
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT SUM(file_size) as total_size FROM $_tableVoiceCaches',
+    );
+    return result.first['total_size'] as int? ?? 0;
   }
 
   /// 转换新格式为旧格式（兼容层）

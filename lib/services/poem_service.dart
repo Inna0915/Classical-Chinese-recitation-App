@@ -111,14 +111,16 @@ class PoemService extends GetxService {
     final poem = allPoems.firstWhereOrNull((p) => p.id == id);
     if (poem != null) {
       final newStatus = !poem.isFavorite;
-      await _db.toggleFavorite(id, newStatus);
       
-      // 更新本地状态
+      // 先更新本地状态，让UI立即响应
       final index = allPoems.indexWhere((p) => p.id == id);
       if (index != -1) {
         allPoems[index] = poem.copyWith(isFavorite: newStatus);
         allPoems.refresh();
       }
+      
+      // 后台执行数据库操作
+      await _db.toggleFavorite(id, newStatus);
     }
   }
 
@@ -154,6 +156,45 @@ class PoemService extends GetxService {
   int getPoemCountByTag(String tagName) {
     final tag = allTags.firstWhereOrNull((t) => t.name == tagName);
     return tag?.poemCount ?? 0;
+  }
+
+  // ==================== 标签管理 ====================
+
+  /// 创建新标签
+  Future<void> createTag(String name) async {
+    await _db.createTag(name);
+    await loadTags();
+  }
+
+  /// 更新标签
+  Future<void> updateTag(int tagId, String newName) async {
+    await _db.updateTag(tagId, newName);
+    await loadTags();
+  }
+
+  /// 删除标签
+  Future<void> deleteTag(int tagId) async {
+    await _db.deleteTag(tagId);
+    await loadTags();
+    await loadPoems(); // 刷新诗词（移除标签关联）
+  }
+
+  /// 为诗词设置标签（完全替换）
+  Future<void> setPoemTags(int poemId, List<int> tagIds) async {
+    await _db.setPoemTags(poemId, tagIds);
+    await loadPoems(); // 刷新诗词列表
+  }
+
+  /// 为诗词添加单个标签
+  Future<void> addTagToPoem(int poemId, int tagId) async {
+    await _db.addTagToPoem(poemId, tagId);
+    await loadPoems();
+  }
+
+  /// 从诗词移除单个标签
+  Future<void> removeTagFromPoem(int poemId, int tagId) async {
+    await _db.removeTagFromPoem(poemId, tagId);
+    await loadPoems();
   }
 
   // ==================== 搜索 ====================
@@ -199,6 +240,12 @@ class PoemService extends GetxService {
   /// 删除小集
   Future<void> deleteCollection(int id) async {
     await _db.deleteCollection(id);
+    await loadCollections();
+  }
+
+  /// 设置小集置顶状态
+  Future<void> setCollectionPinned(int id, bool isPinned) async {
+    await _db.setCollectionPinned(id, isPinned);
     await loadCollections();
   }
 

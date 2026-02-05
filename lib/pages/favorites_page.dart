@@ -27,7 +27,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的收藏'),
+        title: const Text('收藏'),
       ),
       body: Column(
         children: [

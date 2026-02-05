@@ -249,9 +249,41 @@ class TtsService {
     final params = audioParams ?? const AudioParams();
     _addDebugLog('info', '使用音色', voice);
     
-    // 语音缓存功能暂时禁用 - 直接走网络请求
-    // TODO: 恢复缓存功能
-    _addDebugLog('info', '缓存已禁用', '直接进行TTS合成');
+    // 检查语音缓存
+    final cachedVoice = await _db.getVoiceCache(poemId, voice);
+    if (cachedVoice != null) {
+      final filePath = cachedVoice['file_path'] as String;
+      final timestampPath = cachedVoice['timestamp_path'] as String?;
+      final file = File(filePath);
+      
+      if (await file.exists()) {
+        _addDebugLog('info', '命中缓存', '使用已缓存的语音: $filePath');
+        
+        // 加载时间戳
+        List<TimestampItem>? timestamps;
+        if (timestampPath != null) {
+          final timestampFile = File(timestampPath);
+          if (await timestampFile.exists()) {
+            try {
+              final jsonStr = await timestampFile.readAsString();
+              final List<dynamic> jsonList = jsonDecode(jsonStr);
+              timestamps = jsonList.map((e) => TimestampItem.fromJson(e)).toList();
+            } catch (e) {
+              _addDebugLog('error', '读取时间戳失败', e.toString());
+            }
+          }
+        }
+        
+        return TtsResult.success(
+          audioPath: filePath,
+          timestampPath: timestampPath,
+          timestamps: timestamps,
+        );
+      } else {
+        _addDebugLog('info', '缓存文件不存在', '删除记录并重新合成');
+        await _db.deleteVoiceCache(cachedVoice['id'] as int);
+      }
+    }
 
     // Synthesize audio
     _cancelToken = CancelToken();
@@ -271,16 +303,16 @@ class TtsService {
         return TtsResult.failure('合成失败');
       }
 
-      // 语音缓存功能暂时禁用
-      // TODO: 恢复缓存功能
-      // await _db.saveVoiceCache(VoiceCache(
-      //   poemId: poemId,
-      //   voiceType: voice,
-      //   filePath: result.audioFile.path,
-      //   timestampPath: result.timestampPath,
-      //   fileSize: await result.audioFile.length(),
-      //   createdAt: DateTime.now(),
-      // ));
+      // 保存语音缓存
+      await _db.saveVoiceCache({
+        'poem_id': poemId,
+        'voice_type': voice,
+        'file_path': result.audioFile.path,
+        'timestamp_path': result.timestampPath,
+        'file_size': await result.audioFile.length(),
+        'created_at': DateTime.now().toIso8601String(),
+      });
+      _addDebugLog('info', '缓存已保存', '文件: ${result.audioFile.path}');
 
       return TtsResult.success(
         audioPath: result.audioFile.path,
@@ -299,10 +331,14 @@ class TtsService {
     }
   }
 
-  /// 检查指定诗词和音色是否已缓存（语音缓存功能暂时禁用）
+  /// 检查指定诗词和音色是否已缓存
   Future<bool> isVoiceCached(int poemId, String voiceType) async {
-    // 语音缓存功能暂时禁用
-    return false;
+    final cachedVoice = await _db.getVoiceCache(poemId, voiceType);
+    if (cachedVoice == null) return false;
+    
+    final filePath = cachedVoice['file_path'] as String;
+    final file = File(filePath);
+    return await file.exists();
   }
 
   /// Synthesize text to audio file

@@ -1,9 +1,9 @@
-name: guyun_reader
-description: 古韵诵读 - AI 朗读古诗词应用
+name: tongsheng_guyun
+description: 桐声古韵 - AI 朗读古诗词应用
 
 publish_to: 'none'
 
-version: 2.0.1+11
+version: 2.1.0+15
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -50,7 +50,7 @@ flutter:
   uses-material-design: true
   
   assets:
-    - assets/images/logo.svg
+    - assets/images/logo.png       # 应用Logo
     - assets/logos/kimi.png        # Moonshot Kimi
     - assets/logos/deepseek.png    # DeepSeek
     - assets/logos/openai.png      # OpenAI

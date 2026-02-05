@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../controllers/player_controller.dart';
 import '../core/theme/app_theme.dart';
 import '../models/collection.dart';
 import '../models/poem_new.dart';
 import '../services/poem_service.dart';
+import '../utils/collection_covers.dart';
 import '../widgets/dialogs/app_dialog.dart';
 import 'poem_detail_page_new.dart';
 
-/// 小集页 - 歌单封面墙风格
+/// 小集页 - 列表卡片风格
 class CollectionsPage extends StatefulWidget {
   const CollectionsPage({super.key});
 
@@ -23,7 +25,7 @@ class _CollectionsPageState extends State<CollectionsPage> {
     return Scaffold(
       backgroundColor: context.backgroundColor,
       appBar: AppBar(
-        title: const Text('我的小集'),
+        title: const Text('小集'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -36,21 +38,14 @@ class _CollectionsPageState extends State<CollectionsPage> {
           return _buildEmptyView(context);
         }
 
-        return GridView.builder(
-          padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.75,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           itemCount: _poemService.allCollections.length,
           itemBuilder: (context, index) {
             final collection = _poemService.allCollections[index];
-            return CollectionCard(
+            return _CollectionCard(
               collection: collection,
               onTap: () => _openCollection(collection),
-              onLongPress: () => _showCollectionOptions(collection),
             );
           },
         );
@@ -90,241 +85,261 @@ class _CollectionsPageState extends State<CollectionsPage> {
     Get.to(() => CollectionDetailPage(collectionId: collection.id!));
   }
 
-  void _showCollectionOptions(Collection collection) {
-    showModalBottomSheet(
+  void _showCreateCollectionDialog() {
+    final nameController = TextEditingController();
+    
+    showDialog(
       context: context,
-      backgroundColor: context.cardColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      builder: (context) => AlertDialog(
+        backgroundColor: context.cardColor,
+        title: Text('创建小集', style: TextStyle(color: context.textPrimaryColor)),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: '小集名称',
+            hintText: '请输入小集名称',
+          ),
+          style: TextStyle(color: context.textPrimaryColor),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.trim().isNotEmpty) {
+                await _poemService.createCollection(nameController.text.trim());
+                Get.back();
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: context.primaryColor),
+            child: const Text('创建'),
+          ),
+        ],
       ),
-      builder: (context) => SafeArea(
-        child: Column(
+    );
+  }
+}
+
+/// 小集卡片 - 横向列表风格
+class _CollectionCard extends StatelessWidget {
+  final Collection collection;
+  final VoidCallback onTap;
+
+  const _CollectionCard({
+    required this.collection,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final PoemService poemService = Get.find<PoemService>();
+    
+    return Dismissible(
+      key: Key('collection_${collection.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: context.errorColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              title: Text(
-                collection.name,
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: context.textPrimaryColor,
-                ),
+            Text(
+              '删除',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
               ),
-              subtitle: Text('${collection.poemCount} 首诗词'),
             ),
-            const Divider(),
-            ListTile(
-              leading: Icon(Icons.edit, color: context.textSecondaryColor),
-              title: Text('编辑', style: TextStyle(color: context.textPrimaryColor)),
-              onTap: () {
-                Get.back();
-                _showEditCollectionDialog(collection);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.delete, color: context.errorColor),
-              title: Text('删除', style: TextStyle(color: context.errorColor)),
-              onTap: () {
-                Get.back();
-                _confirmDeleteCollection(collection);
-              },
-            ),
+            SizedBox(width: 8),
+            Icon(Icons.delete_outline, color: Colors.white),
           ],
+        ),
+      ),
+      confirmDismiss: (_) async {
+        return await AppDialog.confirm(
+          title: '删除小集',
+          message: '确定要删除小集《${collection.name}》吗？小集内的诗词不会被删除。',
+          confirmText: '删除',
+          cancelText: '保留',
+          confirmColor: context.errorColor,
+        );
+      },
+      onDismissed: (_) => poemService.deleteCollection(collection.id!),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        color: context.cardColor,
+        elevation: 1,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                // 左侧：渐变封面
+                _buildCoverImage(context),
+                const SizedBox(width: 12),
+                // 中间：信息
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              collection.name,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: context.textPrimaryColor,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (collection.isPinned)
+                            Container(
+                              margin: const EdgeInsets.only(left: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: context.primaryColor.withAlpha(26),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Icon(
+                                Icons.push_pin,
+                                size: 12,
+                                color: context.primaryColor,
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${collection.poemCount} 首诗词',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.textSecondaryColor,
+                        ),
+                      ),
+                      // 显示前3个诗词标题
+                      if (collection.items.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 4,
+                          children: collection.items.take(3).map((item) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6, 
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: context.primaryColor.withAlpha(26),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                item.poem?.title ?? '未知',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: context.primaryColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // 右侧：操作按钮
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 置顶按钮
+                    IconButton(
+                      icon: Icon(
+                        collection.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                        color: collection.isPinned 
+                            ? context.primaryColor 
+                            : context.textSecondaryColor,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        poemService.setCollectionPinned(
+                          collection.id!, 
+                          !collection.isPinned,
+                        );
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      tooltip: collection.isPinned ? '取消置顶' : '置顶',
+                    ),
+                    // 删除按钮
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: context.textSecondaryColor,
+                        size: 20,
+                      ),
+                      onPressed: () async {
+                        final confirm = await AppDialog.confirm(
+                          title: '删除小集',
+                          message: '确定要删除小集《${collection.name}》吗？',
+                          confirmText: '删除',
+                          cancelText: '取消',
+                          confirmColor: context.errorColor,
+                        );
+                        if (confirm == true) {
+                          poemService.deleteCollection(collection.id!);
+                        }
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      tooltip: '删除',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
-  void _showCreateCollectionDialog() {
-    final nameController = TextEditingController();
-    final descController = TextEditingController();
+  /// 构建封面图片
+  Widget _buildCoverImage(BuildContext context) {
+    final coverIndex = collection.id != null 
+        ? collection.id! % CollectionCovers.count 
+        : collection.name.hashCode % CollectionCovers.count;
+    final cover = CollectionCovers.getByIndex(coverIndex);
 
-    AppDialog.show(
-      title: '创建小集',
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: nameController,
-            decoration: const InputDecoration(
-              labelText: '小集名称',
-              hintText: '如：我的睡前故事',
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: descController,
-            decoration: const InputDecoration(
-              labelText: '描述（可选）',
-              hintText: '添加一些描述...',
-            ),
-            maxLines: 2,
-          ),
-        ],
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: cover.gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(8),
       ),
-      confirmText: '创建',
-      onConfirm: () async {
-        if (nameController.text.trim().isEmpty) {
-          return;
-        }
-        await _poemService.createCollection(
-          nameController.text.trim(),
-          description: descController.text.trim().isEmpty 
-              ? null 
-              : descController.text.trim(),
-        );
-        Get.back();
-      },
-    );
-  }
-
-  void _showEditCollectionDialog(Collection collection) {
-    final nameController = TextEditingController(text: collection.name);
-    final descController = TextEditingController(text: collection.description ?? '');
-
-    AppDialog.show(
-      title: '编辑小集',
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: nameController,
-            decoration: const InputDecoration(labelText: '小集名称'),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: descController,
-            decoration: const InputDecoration(labelText: '描述'),
-            maxLines: 2,
-          ),
-        ],
-      ),
-      confirmText: '保存',
-      onConfirm: () async {
-        if (nameController.text.trim().isEmpty) {
-          return;
-        }
-        await _poemService.updateCollection(
-          collection.copyWith(
-            name: nameController.text.trim(),
-            description: descController.text.trim().isEmpty 
-                ? null 
-                : descController.text.trim(),
-          ),
-        );
-        Get.back();
-      },
-    );
-  }
-
-  void _confirmDeleteCollection(Collection collection) {
-    AppDialog.confirm(
-      title: '删除小集',
-      message: '确定要删除《${collection.name}》吗？\n小集内的诗词不会被删除。',
-      confirmText: '删除',
-      confirmColor: context.errorColor,
-    ).then((confirmed) {
-      if (confirmed == true) {
-        _poemService.deleteCollection(collection.id!);
-      }
-    });
-  }
-}
-
-/// 小集卡片 - 歌单封面风格
-class CollectionCard extends StatelessWidget {
-  final Collection collection;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-
-  const CollectionCard({
-    super.key,
-    required this.collection,
-    required this.onTap,
-    required this.onLongPress,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      color: context.cardColor,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 封面区域
-            Expanded(
-              flex: 3,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      context.primaryColor.withAlpha(204),
-                      context.primaryColor,
-                    ],
-                  ),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
-                  ),
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.folder_special,
-                    size: 48,
-                    color: Colors.white.withAlpha(230),
-                  ),
-                ),
-              ),
-            ),
-            // 信息区域
-            Expanded(
-              flex: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      collection.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: context.textPrimaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${collection.poemCount} 首诗词',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: context.textSecondaryColor,
-                      ),
-                    ),
-                    if (collection.description != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        collection.description!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: context.textSecondaryColor.withAlpha(179),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          ],
+      child: Center(
+        child: Icon(
+          cover.icon,
+          size: 32,
+          color: Colors.white.withAlpha(230),
         ),
       ),
     );
@@ -375,15 +390,18 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> {
           children: [
             TextField(
               controller: nameController,
-              decoration: const InputDecoration(labelText: '小集名称'),
+              decoration: const InputDecoration(
+                labelText: '小集名称',
+              ),
               style: TextStyle(color: context.textPrimaryColor),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextField(
               controller: descController,
-              decoration: const InputDecoration(labelText: '描述'),
+              decoration: const InputDecoration(
+                labelText: '描述（可选）',
+              ),
               style: TextStyle(color: context.textPrimaryColor),
-              maxLines: 2,
             ),
           ],
         ),
@@ -394,19 +412,16 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> {
           ),
           ElevatedButton(
             onPressed: () async {
-              if (nameController.text.trim().isEmpty) return;
-              
-              await _poemService.updateCollection(
-                _collection!.copyWith(
+              if (nameController.text.trim().isNotEmpty) {
+                await _poemService.updateCollection(_collection!.copyWith(
                   name: nameController.text.trim(),
-                  description: descController.text.trim().isEmpty
-                      ? null
+                  description: descController.text.trim().isEmpty 
+                      ? null 
                       : descController.text.trim(),
-                ),
-              );
-              
-              Get.back();
-              _loadCollection(); // 刷新页面
+                ));
+                await _loadCollection();
+                Get.back();
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: context.primaryColor),
             child: const Text('保存'),
@@ -416,6 +431,21 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> {
     );
   }
 
+  /// 播放全部
+  void _playAll() {
+    if (_collection == null || _collection!.items.isEmpty) return;
+    
+    final poems = _collection!.items
+        .where((item) => item.poem != null)
+        .map((item) => item.poem!)
+        .toList();
+    
+    if (poems.isNotEmpty) {
+      final playerController = Get.find<PlayerController>();
+      playerController.playPoemList(poems, 0);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -423,219 +453,119 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> {
       appBar: AppBar(
         title: Text(_collection?.name ?? '小集详情'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _collection == null ? null : () => _showEditDialog(context),
-          ),
+          if (_collection != null)
+            IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => _showEditDialog(context),
+            ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _collection == null
-              ? const Center(child: Text('小集不存在'))
-              : _buildBody(context),
-    );
-  }
-
-  Widget _buildBody(BuildContext context) {
-    final items = _collection!.items;
-
-    return Column(
-      children: [
-        // 头部信息
-        _buildHeader(context),
-        
-        // 诗词列表
-        Expanded(
-          child: items.isEmpty
-              ? _buildEmptyList(context)
-              : ReorderableListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: items.length,
-                  onReorder: _onReorder,
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final poem = item.poem!;
-                    return _buildPoemListItem(
-                      context,
-                      key: ValueKey(item.poemId),
-                      poem: poem,
-                      index: index,
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: context.cardColor,
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(16),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        context.primaryColor.withAlpha(204),
-                        context.primaryColor,
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(12),
+              ? Center(
+                  child: Text(
+                    '小集不存在',
+                    style: TextStyle(color: context.textSecondaryColor),
                   ),
-                  child: Icon(
-                    Icons.folder_special,
-                    size: 40,
-                    color: Colors.white.withAlpha(230),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _collection!.name,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: context.textPrimaryColor,
-                        ),
-                      ),
-                      if (_collection!.description != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          _collection!.description!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: context.textSecondaryColor,
+                )
+              : Column(
+                  children: [
+                    // 播放全部按钮
+                    if (_collection!.items.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _playAll,
+                            icon: const Icon(Icons.play_arrow),
+                            label: Text('播放全部 (${_collection!.items.length}首)'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: context.primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
                         ),
-                      ],
-                      const SizedBox(height: 8),
-                      Text(
-                        '${_collection!.poemCount} 首诗词',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: context.primaryColor,
-                          fontWeight: FontWeight.w500,
-                        ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // 播放全部按钮
-            if (_collection!.items.isNotEmpty)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _playAll,
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('播放全部'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: context.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    // 诗词列表
+                    Expanded(
+                      child: _collection!.items.isEmpty
+                          ? Center(
+                              child: Text(
+                                '小集中还没有诗词',
+                                style: TextStyle(color: context.textSecondaryColor),
+                              ),
+                            )
+                          : ReorderableListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _collection!.items.length,
+                              onReorder: (oldIndex, newIndex) async {
+                                if (oldIndex < newIndex) {
+                                  newIndex -= 1;
+                                }
+                                final item = _collection!.items.removeAt(oldIndex);
+                                _collection!.items.insert(newIndex, item);
+                                
+                                // 更新数据库排序
+                                final poemIds = _collection!.items
+                                    .map((i) => i.poemId)
+                                    .toList();
+                                await _poemService.reorderCollection(
+                                  widget.collectionId, 
+                                  poemIds,
+                                );
+                                setState(() {});
+                              },
+                              itemBuilder: (context, index) {
+                                final item = _collection!.items[index];
+                                return _CollectionPoemItem(
+                                  key: Key('item_${item.poemId}'),
+                                  item: item,
+                                  onRemove: () async {
+                                    await _poemService.removePoemFromCollection(
+                                      widget.collectionId, 
+                                      item.poemId,
+                                    );
+                                    await _loadCollection();
+                                  },
+                                );
+                              },
+                            ),
                     ),
-                  ),
+                  ],
                 ),
-              ),
-          ],
-        ),
-      ),
     );
   }
+}
 
-  Widget _buildEmptyList(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.music_note_outlined,
-            size: 64,
-            color: context.textSecondaryColor.withAlpha(77),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            '小集是空的',
-            style: TextStyle(
-              fontSize: 16,
-              color: context.textSecondaryColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '在诗词详情页点击"添加到小集"',
-            style: TextStyle(
-              fontSize: 13,
-              color: context.textSecondaryColor.withAlpha(153),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+/// 小集内的诗词项
+class _CollectionPoemItem extends StatelessWidget {
+  final CollectionItem item;
+  final VoidCallback onRemove;
 
-  Widget _buildPoemListItem(
-    BuildContext context, {
-    required Key key,
-    required Poem poem,
-    required int index,
-  }) {
+  const _CollectionPoemItem({
+    super.key,
+    required this.item,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final poem = item.poem;
+    if (poem == null) {
+      return const SizedBox.shrink();
+    }
+
     return Card(
-      key: key,
       margin: const EdgeInsets.only(bottom: 8),
       color: context.cardColor,
-      elevation: 1,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: context.dividerColor),
+      ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: context.primaryColor.withAlpha(26),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Center(
-            child: Text(
-              '${index + 1}',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
-                color: context.primaryColor,
-              ),
-            ),
-          ),
-        ),
         title: Text(
           poem.title,
           style: TextStyle(
@@ -655,51 +585,39 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: Icon(Icons.remove_circle_outline, color: context.errorColor),
-              onPressed: () => _removePoem(poem.id!),
+              icon: Icon(
+                Icons.play_circle_outline,
+                color: context.primaryColor,
+              ),
+              onPressed: () {
+                final playerController = Get.find<PlayerController>();
+                playerController.playPoemList([poem], 0);
+              },
             ),
-            Icon(Icons.drag_handle, color: context.textSecondaryColor),
+            IconButton(
+              icon: Icon(
+                Icons.remove_circle_outline,
+                color: context.errorColor,
+              ),
+              onPressed: () async {
+                final confirm = await AppDialog.confirm(
+                  title: '移除诗词',
+                  message: '确定要从小集中移除《${poem.title}》吗？',
+                  confirmText: '移除',
+                  cancelText: '保留',
+                  confirmColor: context.errorColor,
+                );
+                if (confirm == true) {
+                  onRemove();
+                }
+              },
+            ),
           ],
         ),
-        onTap: () => _onPoemTap(poem),
+        onTap: () {
+          Get.to(() => PoemDetailPageNew(poemId: poem.id!));
+        },
       ),
     );
-  }
-
-  void _onReorder(int oldIndex, int newIndex) {
-    setState(() {
-      if (newIndex > oldIndex) newIndex--;
-      final item = _collection!.items.removeAt(oldIndex);
-      _collection!.items.insert(newIndex, item);
-    });
-    
-    // 保存排序
-    final poemIds = _collection!.items.map((i) => i.poemId).toList();
-    _poemService.reorderCollection(widget.collectionId, poemIds);
-  }
-
-  void _onPoemTap(Poem poem) {
-    _poemService.setCollectionContext(
-      widget.collectionId,
-      initialPoemId: poem.id,
-    );
-    Get.to(() => PoemDetailPageNew(poemId: poem.id!));
-  }
-
-  void _playAll() {
-    if (_collection!.items.isEmpty) return;
-    
-    _poemService.setCollectionContext(
-      widget.collectionId,
-      initialPoemId: _collection!.items.first.poemId,
-    );
-    Get.to(() => PoemDetailPageNew(
-      poemId: _collection!.items.first.poemId,
-    ));
-  }
-
-  void _removePoem(int poemId) {
-    _poemService.removePoemFromCollection(widget.collectionId, poemId);
-    _loadCollection();
   }
 }

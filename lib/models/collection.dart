@@ -6,6 +6,7 @@ class Collection {
   final String name;
   final String? description;
   final String? coverImage;
+  final bool isPinned;
   final DateTime createdAt;
   
   // 运行时数据
@@ -17,6 +18,7 @@ class Collection {
     required this.name,
     this.description,
     this.coverImage,
+    this.isPinned = false,
     DateTime? createdAt,
     this.poemCount = 0,
     this.items = const [],
@@ -28,6 +30,7 @@ class Collection {
       name: map['name'] as String,
       description: map['description'] as String?,
       coverImage: map['cover_image'] as String?,
+      isPinned: (map['is_pinned'] as int?) == 1,
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
@@ -38,6 +41,7 @@ class Collection {
       'name': name,
       'description': description,
       'cover_image': coverImage,
+      'is_pinned': isPinned ? 1 : 0,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -47,6 +51,7 @@ class Collection {
     String? name,
     String? description,
     String? coverImage,
+    bool? isPinned,
     DateTime? createdAt,
     int? poemCount,
     List<CollectionItem>? items,
@@ -56,6 +61,7 @@ class Collection {
       name: name ?? this.name,
       description: description ?? this.description,
       coverImage: coverImage ?? this.coverImage,
+      isPinned: isPinned ?? this.isPinned,
       createdAt: createdAt ?? this.createdAt,
       poemCount: poemCount ?? this.poemCount,
       items: items ?? this.items,

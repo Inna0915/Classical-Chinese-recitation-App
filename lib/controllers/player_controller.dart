@@ -276,6 +276,19 @@ class PlayerController extends GetxController {
     _shufflePosition = 0;
   }
 
+  /// 添加单首诗词到播放列表
+  void addToPlaylist(Poem poem) {
+    // 检查是否已存在
+    if (playlist.any((p) => p.id == poem.id)) {
+      return;
+    }
+    playlist.add(poem);
+    // 如果当前没有播放，设置当前索引
+    if (currentIndex.value < 0) {
+      currentIndex.value = 0;
+    }
+  }
+
   // ==================== 播放控制 ====================
 
   /// 播放指定索引的诗词

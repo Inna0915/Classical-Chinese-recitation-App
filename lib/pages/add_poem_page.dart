@@ -84,10 +84,13 @@ class _AddPoemPageState extends State<AddPoemPage> {
       );
 
       await DatabaseHelper.instance.insertPoem(poem, tagNames: []);
-      await PoemController.to.loadPoems();
       
       if (mounted) {
+        // 先关闭页面，避免卡顿
         Get.back();
+        // 后台刷新数据
+        Future.microtask(() => PoemController.to.loadPoems());
+        
         AppDialog.success(
           title: '录入成功',
           message: '《${poem.title}》已录入书架',

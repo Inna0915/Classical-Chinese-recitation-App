@@ -315,7 +315,7 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
       final playerController = Get.find<PlayerController>();
       final poem = controller.currentPoem.value;
       
-      // 只有当当前诗词在播放中，或者没有播放时才显示控制栏
+      // 检查是否正在播放当前诗词
       final isCurrentPoemPlaying = playerController.currentPoem?.id == poem?.id;
       final hasPlayback = playerController.currentPoem != null;
       
@@ -477,15 +477,19 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // 停止按钮
+                  // 停止按钮（始终显示，非播放状态下禁用）
                   Obx(() {
                     final state = playerController.playbackState.value;
-                    if (state != PlaybackState.playing && state != PlaybackState.paused) {
-                      return const SizedBox(width: 48);
-                    }
+                    final canStop = state == PlaybackState.playing || state == PlaybackState.paused;
                     return IconButton(
-                      icon: Icon(Icons.stop, color: context.textSecondaryColor, size: 24),
-                      onPressed: () => playerController.stop(),
+                      icon: Icon(
+                        Icons.stop, 
+                        color: canStop 
+                            ? context.textSecondaryColor 
+                            : context.dividerColor, 
+                        size: 24,
+                      ),
+                      onPressed: canStop ? () => playerController.stop() : null,
                     );
                   }),
                   
@@ -502,20 +506,57 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                         width: 64,
                         height: 64,
                         decoration: BoxDecoration(
-                          color: isLoading 
-                              ? context.dividerColor 
-                              : context.primaryColor,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: isLoading
+                                ? [context.primaryColor.withAlpha(150), context.primaryColor.withAlpha(100)]
+                                : [context.primaryColor, context.primaryColor.withAlpha(200)],
+                          ),
                           shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: context.primaryColor.withAlpha(isLoading ? 50 : 100),
+                              blurRadius: isLoading ? 8 : 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
                         child: Center(
                           child: isLoading
-                              ? SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(context.textSecondaryColor),
-                                  ),
+                              ? Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // 外圈旋转动画
+                                    SizedBox(
+                                      width: 44,
+                                      height: 44,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white.withAlpha(180),
+                                        ),
+                                      ),
+                                    ),
+                                    // 内圈进度指示
+                                    SizedBox(
+                                      width: 32,
+                                      height: 32,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        value: playerController.downloadProgress.value > 0 
+                                            ? playerController.downloadProgress.value 
+                                            : null,
+                                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    ),
+                                    // 暂停图标
+                                    Icon(
+                                      Icons.hourglass_top,
+                                      color: Colors.white.withAlpha(200),
+                                      size: 18,
+                                    ),
+                                  ],
                                 )
                               : Icon(
                                   state == PlaybackState.playing ? Icons.pause : Icons.play_arrow,
