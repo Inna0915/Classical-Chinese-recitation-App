@@ -179,7 +179,7 @@ class _SettingsPageState extends State<SettingsPage> {
   /// 显示颜色选择器
   void _showColorPicker() {
     final colors = TraditionalChineseColors.allColors;
-    final names = ['朱砂', '竹青', '黛蓝', '栀子', '暮山紫', '玄青'];
+    final names = ['朱砂', '竹青', '黛蓝', '栀子', '暮山紫', '玄青', '靛蓝', '橘橙', '翠绿', '紫罗兰'];
     
     Get.bottomSheet(
       Container(

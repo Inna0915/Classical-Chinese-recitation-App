@@ -78,6 +78,7 @@ class _BookshelfPageState extends State<BookshelfPage> {
                       poem: poem,
                       onTap: () => _onPoemTap(poem),
                       onFavorite: () => _poemService.toggleFavorite(poem.id!),
+                      onAddToCollection: () => _showAddToCollectionSheet(context, poem),
                     );
                   },
                 );
@@ -253,6 +254,130 @@ class _BookshelfPageState extends State<BookshelfPage> {
     
     Get.to(() => PoemDetailPageNew(poemId: poem.id!));
   }
+
+  /// 显示添加到小集 BottomSheet
+  void _showAddToCollectionSheet(BuildContext context, Poem poem) {
+    final collections = _poemService.allCollections;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: context.dividerColor),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '添加到小集',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: context.textPrimaryColor,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: () {
+                      Get.back();
+                      _showCreateCollectionDialog(context);
+                    },
+                    icon: Icon(Icons.add, size: 18, color: context.primaryColor),
+                    label: Text('新建小集', style: TextStyle(color: context.primaryColor)),
+                  ),
+                ],
+              ),
+            ),
+            if (collections.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  '还没有小集，点击右上角创建',
+                  style: TextStyle(color: context.textSecondaryColor),
+                ),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: collections.length,
+                  itemBuilder: (context, index) {
+                    final collection = collections[index];
+                    return ListTile(
+                      leading: Icon(Icons.folder_special, color: context.primaryColor),
+                      title: Text(
+                        collection.name,
+                        style: TextStyle(color: context.textPrimaryColor),
+                      ),
+                      subtitle: Text(
+                        '${collection.poemCount} 首诗词',
+                        style: TextStyle(color: context.textSecondaryColor, fontSize: 12),
+                      ),
+                      onTap: () async {
+                        await _poemService.addPoemToCollection(collection.id!, poem.id!);
+                        Get.back();
+                        Get.snackbar(
+                          '添加成功',
+                          '《${poem.title}》已添加到《${collection.name}》',
+                          snackPosition: SnackPosition.BOTTOM,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 显示创建小集对话框
+  void _showCreateCollectionDialog(BuildContext context) {
+    final nameController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: context.cardColor,
+        title: Text('创建小集', style: TextStyle(color: context.textPrimaryColor)),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: '小集名称',
+            hintText: '请输入小集名称',
+          ),
+          style: TextStyle(color: context.textPrimaryColor),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.trim().isNotEmpty) {
+                await _poemService.createCollection(nameController.text.trim());
+                Get.back();
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: context.primaryColor),
+            child: const Text('创建'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// 诗词卡片 - 新中式极简风格
@@ -260,12 +385,14 @@ class PoemCard extends StatelessWidget {
   final Poem poem;
   final VoidCallback onTap;
   final VoidCallback onFavorite;
+  final VoidCallback? onAddToCollection;
 
   const PoemCard({
     super.key,
     required this.poem,
     required this.onTap,
     required this.onFavorite,
+    this.onAddToCollection,
   });
 
   @override
@@ -304,6 +431,18 @@ class PoemCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                  // 添加到小集按钮
+                  if (onAddToCollection != null)
+                    IconButton(
+                      icon: Icon(
+                        Icons.playlist_add,
+                        color: context.textSecondaryColor,
+                        size: 20,
+                      ),
+                      onPressed: onAddToCollection,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    ),
                   // 收藏按钮
                   IconButton(
                     icon: Icon(

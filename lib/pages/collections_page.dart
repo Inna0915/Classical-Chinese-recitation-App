@@ -358,6 +358,64 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> {
     setState(() => _isLoading = false);
   }
 
+  /// 显示编辑对话框
+  void _showEditDialog(BuildContext context) {
+    if (_collection == null) return;
+    
+    final nameController = TextEditingController(text: _collection!.name);
+    final descController = TextEditingController(text: _collection!.description ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: context.cardColor,
+        title: Text('编辑小集', style: TextStyle(color: context.textPrimaryColor)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: '小集名称'),
+              style: TextStyle(color: context.textPrimaryColor),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(labelText: '描述'),
+              style: TextStyle(color: context.textPrimaryColor),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (nameController.text.trim().isEmpty) return;
+              
+              await _poemService.updateCollection(
+                _collection!.copyWith(
+                  name: nameController.text.trim(),
+                  description: descController.text.trim().isEmpty
+                      ? null
+                      : descController.text.trim(),
+                ),
+              );
+              
+              Get.back();
+              _loadCollection(); // 刷新页面
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: context.primaryColor),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -367,9 +425,7 @@ class _CollectionDetailPageState extends State<CollectionDetailPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit),
-            onPressed: _collection == null ? null : () {
-              // TODO: 显示编辑对话框
-            },
+            onPressed: _collection == null ? null : () => _showEditDialog(context),
           ),
         ],
       ),

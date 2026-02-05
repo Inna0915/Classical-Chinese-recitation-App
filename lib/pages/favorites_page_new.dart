@@ -35,19 +35,6 @@ class _FavoritesPageNewState extends State<FavoritesPageNew> {
     setState(() {});
   }
 
-  List<Poem> get _filteredFavorites {
-    final favorites = _poemService.getFavoritePoems();
-    final query = _searchController.text.trim().toLowerCase();
-    
-    if (query.isEmpty) return favorites;
-    
-    return favorites.where((p) {
-      return p.title.toLowerCase().contains(query) ||
-          p.author.toLowerCase().contains(query) ||
-          p.cleanContent.toLowerCase().contains(query);
-    }).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -61,25 +48,39 @@ class _FavoritesPageNewState extends State<FavoritesPageNew> {
           // 搜索栏
           _buildSearchBar(context),
           
-          // 收藏列表
+          // 收藏列表 - 使用Obx监听allPoems变化
           Expanded(
             child: Obx(() {
-              final favorites = _filteredFavorites;
+              // 直接访问allPoems以建立响应式依赖
+              final allPoems = _poemService.allPoems;
               
-              if (_poemService.getFavoritePoems().isEmpty) {
+              // 获取收藏列表
+              final favorites = allPoems.where((p) => p.isFavorite).toList();
+              
+              // 应用搜索过滤
+              final query = _searchController.text.trim().toLowerCase();
+              final filteredFavorites = query.isEmpty
+                  ? favorites
+                  : favorites.where((p) {
+                      return p.title.toLowerCase().contains(query) ||
+                          p.author.toLowerCase().contains(query) ||
+                          p.cleanContent.toLowerCase().contains(query);
+                    }).toList();
+              
+              if (favorites.isEmpty) {
                 return _buildEmptyView(context);
               }
               
-              if (favorites.isEmpty) {
+              if (filteredFavorites.isEmpty) {
                 return _buildNoResultsView(context);
               }
 
               return ListView.builder(
                 keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                itemCount: favorites.length,
+                itemCount: filteredFavorites.length,
                 itemBuilder: (context, index) {
-                  final poem = favorites[index];
+                  final poem = filteredFavorites[index];
                   return _buildPoemItem(context, poem);
                 },
               );

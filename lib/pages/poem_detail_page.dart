@@ -134,7 +134,8 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
+                    // 兼容新模型：author 字段格式为 "李白 [唐]"
+                    poem.author,
                     style: TextStyle(
                       color: context.textSecondaryColor,
                       fontSize: 14,
@@ -227,7 +228,8 @@ class _PoemDetailPageState extends State<PoemDetailPage> {
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      '${poem.dynasty != null ? '${poem.dynasty} · ' : ''}${poem.author}',
+                      // 兼容新模型：author 字段格式为 "李白 [唐]"
+                      poem.author,
                       style: TextStyle(
                         color: context.textSecondaryColor,
                         fontSize: 13,
